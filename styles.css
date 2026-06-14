@@ -135,9 +135,9 @@ main {
 
 .auth-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 2fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-  align-items: end;
+  align-items: center;
   margin-bottom: 18px;
   padding: 16px;
   border: 1px solid var(--line);
@@ -403,8 +403,8 @@ button:hover {
 }
 
 .photo-box img {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   object-fit: cover;
   border-radius: 6px;
   background: #e7edf2;
@@ -444,7 +444,8 @@ button:hover {
 }
 
 .result-controls,
-.drive-panel {
+.drive-panel,
+.bulk-download-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -471,8 +472,45 @@ button:hover {
   color: var(--brand-strong);
 }
 
+.bulk-download-panel {
+  grid-template-columns: minmax(160px, 1fr) auto auto minmax(90px, auto);
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.bulk-select-all,
+.inspection-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.bulk-select-all input,
+.inspection-select input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+#selected-count {
+  align-self: center;
+  color: var(--brand-strong);
+  font-weight: 800;
+}
+
 .inspection-card {
   padding: 18px;
+}
+
+.inspection-select {
+  width: fit-content;
+  margin-bottom: 12px;
 }
 
 .inspection-summary {
@@ -569,8 +607,8 @@ button:hover {
 }
 
 .card-photos img {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   object-fit: cover;
   border-radius: 6px;
   border: 1px solid var(--line);
@@ -659,6 +697,7 @@ button:hover {
   .stats-layout,
   .result-controls,
   .drive-panel,
+  .bulk-download-panel,
   .inline-add,
   .sample-save,
   .contractor-add {

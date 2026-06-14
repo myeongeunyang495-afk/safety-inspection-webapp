@@ -259,3 +259,21 @@ https://사이트이름.netlify.app
 ## 참고
 
 로컬에서 저장한 `data/db.json` 데이터와 Netlify 배포 후 저장되는 데이터는 서로 다릅니다. Netlify 배포본은 Netlify Blobs에 데이터를 저장합니다.
+
+## 현재 개인별 저장 방식
+
+앱은 사용자에게 이메일/비밀번호 로그인을 요구하지 않고, Supabase Anonymous sign-ins로 자동 개인 저장공간을 만듭니다.
+
+Supabase에서 아래 설정을 켜야 합니다.
+
+```text
+Authentication -> Sign In / Providers -> Anonymous sign-ins
+```
+
+이 방식은 사용자가 따로 로그인하지 않아도 점검결과와 사진이 사용자별 `auth.uid()` 기준으로 분리 저장됩니다.
+
+주의할 점:
+
+- 같은 휴대폰/브라우저에서는 본인 자료가 계속 이어집니다.
+- 브라우저 데이터를 삭제하거나 다른 기기로 접속하면 새 사용자로 인식될 수 있습니다.
+- 기존 SQL의 `auth.uid() = user_id` RLS 정책과 Storage 폴더 정책은 그대로 사용합니다.

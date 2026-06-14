@@ -22,17 +22,10 @@
     </header>
 
     <main>
-      <section id="auth-panel" class="auth-panel" aria-label="개인 계정 로그인">
+      <section id="auth-panel" class="auth-panel" aria-label="개인별 자동 저장 상태">
         <div>
-          <strong>개인별 자료 저장</strong>
-          <span id="auth-status">Supabase 설정 확인 중</span>
-        </div>
-        <div class="auth-controls">
-          <input id="auth-email" type="email" autocomplete="email" placeholder="이메일">
-          <input id="auth-password" type="password" autocomplete="current-password" placeholder="비밀번호">
-          <button type="button" id="auth-sign-in">로그인</button>
-          <button type="button" id="auth-sign-up">가입</button>
-          <button type="button" id="auth-sign-out">로그아웃</button>
+          <strong>개인별 자동 저장</strong>
+          <span id="auth-status">개인 저장공간 확인 중</span>
         </div>
       </section>
 
@@ -164,6 +157,15 @@
           </label>
           <button type="button" id="save-google-client-id">저장</button>
           <span id="drive-status" role="status"></span>
+        </div>
+        <div class="bulk-download-panel" aria-label="선택한 점검결과 일괄 다운로드">
+          <label class="bulk-select-all">
+            <input id="select-all-inspections" type="checkbox">
+            <span>현재 결과 전체 선택</span>
+          </label>
+          <button type="button" id="download-selected-doc">선택 한글파일 다운로드</button>
+          <button type="button" id="download-selected-excel">선택 엑셀파일 다운로드</button>
+          <span id="selected-count" role="status">선택 0건</span>
         </div>
         <div id="inspection-list" class="inspection-list"></div>
       </section>

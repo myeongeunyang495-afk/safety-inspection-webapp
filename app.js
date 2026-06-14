@@ -13,6 +13,7 @@ const state = {
   supabase: null,
   supabaseUser: null,
   supabaseEnabled: false,
+  selectedInspectionIds: new Set(),
   photos: {
     beforePhoto: ""
   },
@@ -21,6 +22,7 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+const EXCLUDED_PREVIOUS_RESULT_LABELS = ["즉시개선", "개선요청", "추적관리"];
 
 function todayLocalDateTime() {
   const date = new Date();
@@ -62,6 +64,7 @@ async function initSupabase() {
       renderAuthState();
       await loadSupabaseInspections();
     });
+    if (!state.supabaseUser) await signInAnonymously();
     renderAuthState();
   } catch (error) {
     renderAuthState(`Supabase 설정 확인 실패: ${error.message}`);
@@ -74,48 +77,26 @@ function renderAuthState(message = "") {
   const status = $("#auth-status");
   const signedIn = Boolean(state.supabaseUser);
   panel.classList.toggle("is-disabled", !state.supabaseEnabled);
-  $("#auth-sign-out").hidden = !signedIn;
-  $("#auth-sign-in").hidden = signedIn;
-  $("#auth-sign-up").hidden = signedIn;
-  $("#auth-email").disabled = signedIn || !state.supabaseEnabled;
-  $("#auth-password").disabled = signedIn || !state.supabaseEnabled;
   if (message) {
     status.textContent = message;
   } else if (!state.supabaseEnabled) {
-    status.textContent = "Supabase 환경변수를 설정하면 개인별 저장이 켜집니다.";
+    status.textContent = "Supabase 환경변수를 설정하면 개인별 자동 저장이 켜집니다.";
   } else if (signedIn) {
-    status.textContent = `${state.supabaseUser.email} 계정으로 저장 중`;
+    status.textContent = "개인 저장공간에 자동 저장 중";
   } else {
-    status.textContent = "로그인하면 본인 자료만 저장/조회됩니다.";
+    status.textContent = "개인 저장공간을 준비 중입니다.";
   }
 }
 
-async function signInSupabase() {
-  const email = $("#auth-email").value.trim();
-  const password = $("#auth-password").value;
-  if (!email || !password) return setStatus("이메일과 비밀번호를 입력하세요.");
-  const { error } = await state.supabase.auth.signInWithPassword({ email, password });
-  if (error) return setStatus(error.message);
-  setStatus("로그인되었습니다.");
-}
-
-async function signUpSupabase() {
-  const email = $("#auth-email").value.trim();
-  const password = $("#auth-password").value;
-  if (!email || !password) return setStatus("이메일과 비밀번호를 입력하세요.");
-  const { error } = await state.supabase.auth.signUp({ email, password });
-  if (error) return setStatus(error.message);
-  setStatus("가입되었습니다. 이메일 확인 설정이 켜져 있으면 메일 인증 후 로그인하세요.");
-}
-
-async function signOutSupabase() {
-  const { error } = await state.supabase.auth.signOut();
-  if (error) return setStatus(error.message);
-  state.inspections = [];
-  state.stats = buildStatsFromInspections(state.inspections);
-  renderList();
-  renderStats();
-  setStatus("로그아웃되었습니다.");
+async function signInAnonymously() {
+  if (!state.supabaseEnabled || !state.supabase) return;
+  renderAuthState("개인 저장공간을 준비 중입니다.");
+  const { data, error } = await state.supabase.auth.signInAnonymously();
+  if (error) {
+    renderAuthState("Supabase Anonymous sign-ins를 켜야 개인별 자동 저장을 사용할 수 있습니다.");
+    throw error;
+  }
+  state.supabaseUser = data.user || null;
 }
 
 function fillSelect(select, items, placeholder) {
@@ -201,7 +182,7 @@ function uniquePreviousResults() {
   const samples = [];
   for (const item of state.inspections) {
     const content = String(item.resultText || "").trim();
-    if (!content || seen.has(content)) continue;
+    if (!content || seen.has(content) || isExcludedPreviousResult(content, item.actionType)) continue;
     seen.add(content);
     samples.push({
       id: `previous:${item.id}`,
@@ -211,6 +192,15 @@ function uniquePreviousResults() {
     });
   }
   return samples;
+}
+
+function isExcludedPreviousResult(content, actionType = "") {
+  const normalizedContent = String(content || "").replace(/\s+/g, "");
+  const normalizedActionType = String(actionType || "").replace(/\s+/g, "");
+  return EXCLUDED_PREVIOUS_RESULT_LABELS.some((label) => {
+    const normalizedLabel = label.replace(/\s+/g, "");
+    return normalizedContent === normalizedLabel || normalizedActionType === normalizedLabel;
+  });
 }
 
 function selectedPreviousResult(value) {
@@ -241,21 +231,24 @@ async function loadLaws() {
 
 function renderList() {
   const list = $("#inspection-list");
-  const filter = $("#filter-theme").value || "전체";
-  const detailFilter = $("#filter-detail-theme").value || "전체 세부테마";
-  const items = state.inspections.filter((item) => {
-    const themeMatches = filter === "전체" || item.theme === filter;
-    const detailMatches = detailFilter === "전체 세부테마" || item.detailTheme === detailFilter;
-    return themeMatches && detailMatches;
-  });
+  const items = filteredInspectionItems();
+  const visibleIds = new Set(items.map((item) => item.id));
+  for (const id of [...state.selectedInspectionIds]) {
+    if (!state.inspections.some((item) => item.id === id)) state.selectedInspectionIds.delete(id);
+  }
 
   if (!items.length) {
     list.innerHTML = '<div class="empty">저장된 점검결과가 없습니다.</div>';
+    renderBulkDownloadState(items);
     return;
   }
 
   list.innerHTML = items.map((item) => `
     <article class="inspection-card" data-id="${escapeHtml(item.id)}">
+      <label class="inspection-select">
+        <input type="checkbox" data-action="select-inspection" data-id="${escapeHtml(item.id)}" ${state.selectedInspectionIds.has(item.id) ? "checked" : ""}>
+        <span>다운로드 선택</span>
+      </label>
       <button class="inspection-summary" type="button" data-action="toggle-detail" data-id="${escapeHtml(item.id)}">
         <span><span class="summary-label">테마</span><strong>${escapeHtml(item.theme)}</strong></span>
         <span><span class="summary-label">일시</span>${formatDate(item.inspectedAt)}</span>
@@ -282,6 +275,34 @@ function renderList() {
       </div>
     </article>
   `).join("");
+  for (const id of [...state.selectedInspectionIds]) {
+    if (!visibleIds.has(id)) state.selectedInspectionIds.delete(id);
+  }
+  renderBulkDownloadState(items);
+}
+
+function filteredInspectionItems() {
+  const filter = $("#filter-theme").value || "전체";
+  const detailFilter = $("#filter-detail-theme").value || "전체 세부테마";
+  return state.inspections.filter((item) => {
+    const themeMatches = filter === "전체" || item.theme === filter;
+    const detailMatches = detailFilter === "전체 세부테마" || item.detailTheme === detailFilter;
+    return themeMatches && detailMatches;
+  });
+}
+
+function renderBulkDownloadState(items = filteredInspectionItems()) {
+  const visibleIds = items.map((item) => item.id);
+  const selectedVisibleCount = visibleIds.filter((id) => state.selectedInspectionIds.has(id)).length;
+  const selectAll = $("#select-all-inspections");
+  if (selectAll) {
+    selectAll.checked = Boolean(visibleIds.length && selectedVisibleCount === visibleIds.length);
+    selectAll.indeterminate = Boolean(selectedVisibleCount && selectedVisibleCount < visibleIds.length);
+    selectAll.disabled = !visibleIds.length;
+  }
+  $("#download-selected-doc").disabled = !selectedVisibleCount;
+  $("#download-selected-excel").disabled = !selectedVisibleCount;
+  $("#selected-count").textContent = `선택 ${selectedVisibleCount}건`;
 }
 
 function displayTarget(item) {
@@ -459,7 +480,7 @@ async function loadSupabaseInspections() {
 }
 
 async function saveSupabaseInspection(payload) {
-  if (!state.supabaseUser) throw new Error("로그인 후 저장할 수 있습니다.");
+  if (!state.supabaseUser) throw new Error("개인 저장공간 준비 후 저장할 수 있습니다.");
   const next = { ...payload };
   if (next.beforePhoto) {
     next.beforePhotoPath = await uploadSupabasePhoto(next.beforePhoto);
@@ -581,36 +602,38 @@ async function inlinePhotoForDocument(item) {
 
 function inspectionDocHtml(item) {
   const laws = item.laws || [];
+  const photoHtml = item.beforePhoto
+    ? `<img src="${item.beforePhoto}" width="50" height="50" alt="조치 전 사진" style="width:50px;height:50px;max-width:50px;max-height:50px;mso-width-alt:50;mso-height-alt:50;border:1px solid #999;">`
+    : "사진 없음";
   return `
     <!doctype html>
     <html lang="ko">
       <head>
         <meta charset="utf-8">
         <style>
-          body { font-family: Malgun Gothic, Arial, sans-serif; line-height: 1.6; }
-          h1 { font-size: 22px; }
-          table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-          th, td { border: 1px solid #999; padding: 8px; text-align: left; vertical-align: top; }
-          th { width: 140px; background: #f0f0f0; }
-          img { width: 60px; height: 60px; object-fit: cover; }
-          .photo-cell { text-align: center; }
+          body { font-family: Malgun Gothic, Arial, sans-serif; line-height: 1.55; color: #111; }
+          h1 { margin: 0 0 14px; font-size: 20px; text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0; table-layout: fixed; }
+          th, td { border: 1px solid #777; padding: 7px; text-align: left; vertical-align: top; font-size: 10.5pt; word-break: break-all; }
+          th { width: 120px; background: #eef4fb; font-weight: 700; }
+          .result-cell { min-height: 70px; }
+          .photo-cell { height: 62px; text-align: center; vertical-align: middle; }
+          .photo-cell img { width: 50px !important; height: 50px !important; max-width: 50px !important; max-height: 50px !important; }
         </style>
       </head>
       <body>
-        <h1>점검결과</h1>
+        <h1>안전보건 점검결과</h1>
         <table>
-          <tr><th>점검테마</th><td>${escapeHtml(item.theme)}</td></tr>
-          <tr><th>점검일시</th><td>${formatDate(item.inspectedAt)}</td></tr>
-          <tr><th>점검대상</th><td>${escapeHtml(displayTarget(item))}</td></tr>
-          <tr><th>점검자</th><td>${escapeHtml(displayInspectors(item))}</td></tr>
-          <tr><th>세부 점검테마</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
-          <tr><th>조치 구분</th><td>${escapeHtml(item.actionType)}</td></tr>
-          <tr><th>점검결과</th><td>${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
-          <tr><th>관련 법령</th><td>${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
+          <tr><th>점검테마</th><td>${escapeHtml(item.theme)}</td><th>세부 점검테마</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
+          <tr><th>점검일시</th><td>${formatDate(item.inspectedAt)}</td><th>조치 구분</th><td>${escapeHtml(item.actionType)}</td></tr>
+          <tr><th>점검대상</th><td colspan="3">${escapeHtml(displayTarget(item))}</td></tr>
+          <tr><th>점검자</th><td colspan="3">${escapeHtml(displayInspectors(item))}</td></tr>
+          <tr><th>점검결과</th><td class="result-cell" colspan="3">${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
+          <tr><th>관련 법령</th><td colspan="3">${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
         </table>
         <table>
           <tr><th>조치 전 사진</th></tr>
-          <tr><td class="photo-cell">${item.beforePhoto ? `<img src="${item.beforePhoto}" alt="조치 전 사진">` : "사진 없음"}</td></tr>
+          <tr><td class="photo-cell">${photoHtml}</td></tr>
         </table>
       </body>
     </html>
@@ -686,6 +709,28 @@ function downloadInspection(item, type) {
   downloadBlob(file.filename, file.mimeType, file.content);
     setStatus(`${file.filename} 다운로드를 시작했습니다.`);
   });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function downloadSelectedInspections(type) {
+  const items = filteredInspectionItems().filter((item) => state.selectedInspectionIds.has(item.id));
+  if (!items.length) return setStatus("다운로드할 점검결과를 선택하세요.");
+  const buttons = [$("#download-selected-doc"), $("#download-selected-excel")];
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+  try {
+    for (const item of items) {
+      await downloadInspection(item, type);
+      await delay(250);
+    }
+    setStatus(`선택한 점검결과 ${items.length}건 다운로드를 시작했습니다.`);
+  } finally {
+    renderBulkDownloadState();
+  }
 }
 
 function renderDriveStatus() {
@@ -804,9 +849,19 @@ function bindEvents() {
   $("#filter-theme").addEventListener("change", renderList);
   $("#filter-detail-theme").addEventListener("change", renderList);
   $("#save-google-client-id").addEventListener("click", saveGoogleClientId);
-  $("#auth-sign-in").addEventListener("click", signInSupabase);
-  $("#auth-sign-up").addEventListener("click", signUpSupabase);
-  $("#auth-sign-out").addEventListener("click", signOutSupabase);
+  $("#select-all-inspections").addEventListener("change", (event) => {
+    const items = filteredInspectionItems();
+    for (const item of items) {
+      if (event.target.checked) {
+        state.selectedInspectionIds.add(item.id);
+      } else {
+        state.selectedInspectionIds.delete(item.id);
+      }
+    }
+    renderList();
+  });
+  $("#download-selected-doc").addEventListener("click", () => downloadSelectedInspections("doc"));
+  $("#download-selected-excel").addEventListener("click", () => downloadSelectedInspections("excel"));
 
   $("#inspection-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-action]");
@@ -838,6 +893,16 @@ function bindEvents() {
         button.disabled = false;
       }
     }
+  });
+  $("#inspection-list").addEventListener("change", (event) => {
+    const checkbox = event.target.closest('[data-action="select-inspection"]');
+    if (!checkbox) return;
+    if (checkbox.checked) {
+      state.selectedInspectionIds.add(checkbox.dataset.id);
+    } else {
+      state.selectedInspectionIds.delete(checkbox.dataset.id);
+    }
+    renderBulkDownloadState();
   });
 
   $("#beforePhoto").addEventListener("change", (event) => readPhoto(event.target, "beforePhoto", $("#before-preview")));
@@ -946,6 +1011,7 @@ function bindEvents() {
     window.setTimeout(() => {
       activateView("list");
       renderList();
+      $("#list").scrollIntoView({ behavior: "smooth", block: "start" });
     }, 700);
   });
 }

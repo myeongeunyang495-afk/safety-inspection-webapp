@@ -8,8 +8,6 @@ const state = {
   resultSamples: [],
   inspections: [],
   stats: { total: 0, byTheme: [], byAction: {}, targetByMonth: {} },
-  googleAccessToken: "",
-  googleTokenClient: null,
   supabase: null,
   supabaseUser: null,
   supabaseEnabled: false,
@@ -139,7 +137,7 @@ function renderFormOptions() {
   renderTargetOptions(currentTarget);
 
   const sampleSelect = $("#result-sample");
-  sampleSelect.innerHTML = '<option value="">직접작성</option>';
+  sampleSelect.value = "직접작성";
   renderInspectors();
   renderThemeLaws();
   updateResultMode();
@@ -229,8 +227,6 @@ function renderList() {
         <div class="download-actions">
           <button type="button" data-action="download-doc" data-id="${escapeHtml(item.id)}">한글파일 다운로드</button>
           <button type="button" data-action="download-excel" data-id="${escapeHtml(item.id)}">엑셀파일 다운로드</button>
-          <button type="button" data-action="drive-doc" data-id="${escapeHtml(item.id)}">드라이브 한글 저장</button>
-          <button type="button" data-action="drive-excel" data-id="${escapeHtml(item.id)}">드라이브 엑셀 저장</button>
         </div>
       </div>
     </article>
@@ -693,90 +689,9 @@ async function downloadSelectedInspections(type) {
   }
 }
 
-function renderDriveStatus() {
-  const status = $("#drive-status");
-  if (!status) return;
-  const clientId = localStorage.getItem("googleClientId") || "";
-  status.textContent = clientId
-    ? "Google Drive 연결 준비됨"
-    : "Google Cloud OAuth Client ID를 저장하세요.";
-}
-
-function loadGoogleClientId() {
-  const input = $("#google-client-id");
-  if (!input) return;
-  input.value = localStorage.getItem("googleClientId") || "";
-  renderDriveStatus();
-}
-
 function activateView(viewId) {
   $$(".tab").forEach((item) => item.classList.toggle("is-active", item.dataset.view === viewId));
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewId));
-}
-
-function saveGoogleClientId() {
-  const value = $("#google-client-id").value.trim();
-  if (!value) return setStatus("Google OAuth Client ID를 입력하세요.");
-  localStorage.setItem("googleClientId", value);
-  state.googleTokenClient = null;
-  renderDriveStatus();
-  setStatus("Google OAuth Client ID가 저장되었습니다.");
-}
-
-function requestGoogleAccessToken() {
-  return new Promise((resolve, reject) => {
-    const clientId = localStorage.getItem("googleClientId") || "";
-    if (!clientId) return reject(new Error("Google OAuth Client ID를 먼저 저장하세요."));
-    if (!window.google?.accounts?.oauth2) return reject(new Error("Google 로그인 라이브러리를 불러오지 못했습니다."));
-    state.googleTokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: "https://www.googleapis.com/auth/drive.file",
-      callback: (response) => {
-        if (response?.access_token) {
-          state.googleAccessToken = response.access_token;
-          resolve(response.access_token);
-          return;
-        }
-        reject(new Error(response?.error || "Google Drive 연결에 실패했습니다."));
-      }
-    });
-    state.googleTokenClient.requestAccessToken({ prompt: state.googleAccessToken ? "" : "consent" });
-  });
-}
-
-async function uploadInspectionToDrive(item, type) {
-  const token = await requestGoogleAccessToken();
-  const file = await inspectionFile(item, type);
-  const boundary = `inspection_upload_${Date.now()}`;
-  const metadata = {
-    name: file.filename,
-    mimeType: file.mimeType
-  };
-  const body = [
-    `--${boundary}`,
-    "Content-Type: application/json; charset=UTF-8",
-    "",
-    JSON.stringify(metadata),
-    `--${boundary}`,
-    `Content-Type: ${file.mimeType}; charset=UTF-8`,
-    "",
-    file.content,
-    `--${boundary}--`,
-    ""
-  ].join("\r\n");
-
-  const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id%2CwebViewLink%2Cname", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": `multipart/related; boundary=${boundary}`
-    },
-    body
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Google Drive 업로드에 실패했습니다.");
-  $("#drive-status").innerHTML = `<a href="${data.webViewLink}" target="_blank" rel="noopener">${escapeHtml(data.name)}</a> 저장 완료`;
-  return data;
 }
 
 async function loadData() {
@@ -804,7 +719,6 @@ function bindEvents() {
   $("#targetOwner").addEventListener("change", () => renderTargetOptions());
   $("#filter-theme").addEventListener("change", renderList);
   $("#filter-detail-theme").addEventListener("change", renderList);
-  $("#save-google-client-id").addEventListener("click", saveGoogleClientId);
   $("#select-all-inspections").addEventListener("change", (event) => {
     const items = filteredInspectionItems();
     for (const item of items) {
@@ -832,17 +746,6 @@ function bindEvents() {
         button.disabled = true;
         const type = button.dataset.action === "download-doc" ? "doc" : "excel";
         await downloadInspection(item, type);
-      } catch (error) {
-        setStatus(error.message);
-      } finally {
-        button.disabled = false;
-      }
-    }
-    if (button.dataset.action === "drive-doc" || button.dataset.action === "drive-excel") {
-      try {
-        button.disabled = true;
-        const type = button.dataset.action === "drive-doc" ? "doc" : "excel";
-        await uploadInspectionToDrive(item, type);
       } catch (error) {
         setStatus(error.message);
       } finally {
@@ -953,6 +856,8 @@ function bindEvents() {
     }
     state.themes = [...new Set([...state.themes, payload.theme])];
     renderFormOptions();
+    $("#filter-theme").value = "전체";
+    $("#filter-detail-theme").value = "전체 세부테마";
     renderList();
     renderStats();
     event.target.reset();
@@ -974,7 +879,6 @@ function bindEvents() {
 document.addEventListener("DOMContentLoaded", async () => {
   $("#inspectedAt").value = todayLocalDateTime();
   bindEvents();
-  loadGoogleClientId();
   try {
     await initSupabase();
     await loadData();
@@ -990,7 +894,7 @@ function normalizeActionType(actionType) {
 }
 
 function updateResultMode() {
-  $("#result-sample").value = "";
+  $("#result-sample").value = "직접작성";
   $("#actionType").disabled = false;
   $("#new-result-content").disabled = false;
   $("#new-result-content").placeholder = "직접 작성할 점검결과를 입력하세요.";

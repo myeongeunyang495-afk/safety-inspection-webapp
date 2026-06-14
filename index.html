@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>수도권서부본부 안전보건처 점검결과 관리</title>
     <link rel="stylesheet" href="/styles.css">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
@@ -110,9 +109,7 @@
           <div class="grid two">
             <label>
               <span>미리 작성된 점검결과</span>
-              <select id="result-sample">
-                <option value="">직접 작성</option>
-              </select>
+              <input id="result-sample" type="text" value="직접작성" readonly>
             </label>
             <label>
               <span>조치 구분</span>
@@ -149,14 +146,6 @@
             <select id="filter-theme" aria-label="점검테마 필터"></select>
             <select id="filter-detail-theme" aria-label="세부점검테마 필터"></select>
           </div>
-        </div>
-        <div class="drive-panel">
-          <label>
-            <span>Google OAuth Client ID</span>
-            <input id="google-client-id" type="text" autocomplete="off" placeholder="Google Cloud OAuth Client ID">
-          </label>
-          <button type="button" id="save-google-client-id">저장</button>
-          <span id="drive-status" role="status"></span>
         </div>
         <div class="bulk-download-panel" aria-label="선택한 점검결과 일괄 다운로드">
           <label class="bulk-select-all">
@@ -197,6 +186,6 @@
       <span>수도권서부본부</span>
     </footer>
 
-    <script src="/app.js?v=20260614-direct-only"></script>
+    <script src="/app.js?v=20260614-list-google-removed"></script>
   </body>
 </html>

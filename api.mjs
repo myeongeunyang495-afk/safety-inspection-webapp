@@ -24,26 +24,7 @@ const defaultDb = {
   targets: ["영업", "승무", "차량", "시설", "건축", "전기"],
   contractors: ["코레일테크", "코레일네트웍스", "코레일유통", "코레일관광개발", "코레일로지스"],
   inspectors: ["양명은", "최연호", "박지민", "안재현", "황희진", "박대현"],
-  resultSamples: [
-    {
-      id: "sample-1",
-      title: "즉시개선",
-      content: "작업장 내 위험요인을 확인하여 현장에서 즉시 제거하고 작업자에게 재발 방지 교육을 실시함.",
-      actionType: "즉시조치완료"
-    },
-    {
-      id: "sample-2",
-      title: "개선요청",
-      content: "안전표지와 방호장치 상태가 미흡하여 담당 부서에 보완 조치를 요청함.",
-      actionType: "조치필요"
-    },
-    {
-      id: "sample-3",
-      title: "추적관리",
-      content: "개선 계획 수립이 필요한 사항으로 담당자 지정 후 다음 점검 시 조치 완료 여부를 확인 예정임.",
-      actionType: "조치필요"
-    }
-  ],
+  resultSamples: [],
   inspections: []
 };
 
@@ -77,9 +58,8 @@ function mergeDefaults(db) {
   for (const [theme, laws] of Object.entries(defaultDb.themeLaws)) {
     if (!(theme in next.themeLaws)) next.themeLaws[theme] = [...laws];
   }
-  for (const item of [...(next.resultSamples || []), ...(next.inspections || [])]) {
-    const defaultSample = defaultDb.resultSamples.find((sample) => sample.id === item.id);
-    if (defaultSample && next.resultSamples?.includes(item)) Object.assign(item, defaultSample);
+  next.resultSamples = [];
+  for (const item of next.inspections || []) {
     if (["A 조치", "교육", "점검완료"].includes(item.actionType)) item.actionType = "즉시조치완료";
     if (["B 조치", "C 조치"].includes(item.actionType)) item.actionType = "조치필요";
   }
@@ -419,17 +399,9 @@ export default async function handler(request) {
     }
 
     if (request.method === "POST" && path === "/result-samples") {
-      const body = await request.json();
-      const sample = {
-        id: crypto.randomUUID(),
-        title: String(body.title || "").trim() || "새 점검결과",
-        content: String(body.content || "").trim(),
-        actionType: String(body.actionType || "즉시조치완료").trim()
-      };
-      if (!sample.content) return json(400, { message: "점검결과 내용이 필요합니다." });
-      db.resultSamples.unshift(sample);
+      db.resultSamples = [];
       await writeDb(db);
-      return json(201, { sample, resultSamples: db.resultSamples });
+      return json(200, { resultSamples: [] });
     }
 
     if (request.method === "POST" && path === "/inspections") {

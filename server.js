@@ -413,6 +413,13 @@ async function handleApi(req, res, pathname) {
     });
   }
 
+  if (req.method === "GET" && pathname === "/api/config") {
+    return sendJson(res, 200, {
+      supabaseUrl: process.env.SUPABASE_URL || "",
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY || ""
+    });
+  }
+
   if (req.method === "POST" && pathname === "/api/law-api-oc") {
     const body = await readBody(req);
     const lawApiOc = String(body.lawApiOc || "").trim();

@@ -22,7 +22,6 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
-const EXCLUDED_PREVIOUS_RESULT_LABELS = ["즉시개선", "개선요청", "추적관리"];
 
 function todayLocalDateTime() {
   const date = new Date();
@@ -140,16 +139,7 @@ function renderFormOptions() {
   renderTargetOptions(currentTarget);
 
   const sampleSelect = $("#result-sample");
-  const selectedSample = sampleSelect.value;
   sampleSelect.innerHTML = '<option value="">직접작성</option>';
-  const previousResults = uniquePreviousResults();
-  for (const sample of previousResults) {
-    const option = document.createElement("option");
-    option.value = sample.id;
-    option.textContent = sample.title;
-    sampleSelect.append(option);
-  }
-  sampleSelect.value = selectedSample;
   renderInspectors();
   renderThemeLaws();
   updateResultMode();
@@ -175,36 +165,6 @@ function renderInspectors() {
 
 function getSelectedInspectors() {
   return $$('input[name="inspectors"]:checked').map((item) => item.value);
-}
-
-function uniquePreviousResults() {
-  const seen = new Set();
-  const samples = [];
-  for (const item of state.inspections) {
-    const content = String(item.resultText || "").trim();
-    if (!content || seen.has(content) || isExcludedPreviousResult(content, item.actionType)) continue;
-    seen.add(content);
-    samples.push({
-      id: `previous:${item.id}`,
-      title: content.length > 28 ? `${content.slice(0, 28)}...` : content,
-      content,
-      actionType: item.actionType || "즉시조치완료"
-    });
-  }
-  return samples;
-}
-
-function isExcludedPreviousResult(content, actionType = "") {
-  const normalizedContent = String(content || "").replace(/\s+/g, "");
-  const normalizedActionType = String(actionType || "").replace(/\s+/g, "");
-  return EXCLUDED_PREVIOUS_RESULT_LABELS.some((label) => {
-    const normalizedLabel = label.replace(/\s+/g, "");
-    return normalizedContent === normalizedLabel || normalizedActionType === normalizedLabel;
-  });
-}
-
-function selectedPreviousResult(value) {
-  return uniquePreviousResults().find((item) => item.id === value);
 }
 
 function renderThemeLaws() {
@@ -837,11 +797,7 @@ function bindEvents() {
     tab.addEventListener("click", () => activateView(tab.dataset.view));
   });
 
-  $("#result-sample").addEventListener("change", (event) => {
-    const sample = selectedPreviousResult(event.target.value);
-    if (sample) $("#actionType").value = normalizeActionType(sample.actionType);
-    updateResultMode();
-  });
+  $("#result-sample").addEventListener("change", updateResultMode);
 
   $("#theme").addEventListener("change", loadLaws);
   $("#detailTheme").addEventListener("change", loadLaws);
@@ -969,9 +925,8 @@ function bindEvents() {
     event.preventDefault();
     const inspectors = getSelectedInspectors();
     if (!inspectors.length) return setStatus("점검자를 한 명 이상 선택하세요.");
-    const sample = selectedPreviousResult($("#result-sample").value);
     const directText = $("#new-result-content").value.trim();
-    if (!sample && !directText) return setStatus("직접작성 점검결과 내용을 입력하세요.");
+    if (!directText) return setStatus("직접작성 점검결과 내용을 입력하세요.");
     const payload = {
       theme: $("#theme").value,
       detailTheme: $("#detailTheme").value,
@@ -981,8 +936,8 @@ function bindEvents() {
       targetCategory: $("#targetCategory").value,
       targetDetail: $("#targetDetail").value.trim(),
       inspectors,
-      resultTitle: sample?.title || "",
-      resultText: sample?.content || directText,
+      resultTitle: "",
+      resultText: directText,
       actionType: $("#actionType").value,
       beforePhoto: state.photos.beforePhoto
     };
@@ -1035,10 +990,8 @@ function normalizeActionType(actionType) {
 }
 
 function updateResultMode() {
-  const isDirect = $("#result-sample").value === "";
-  $("#actionType").disabled = !isDirect;
-  $("#new-result-content").disabled = !isDirect;
-  $("#new-result-content").placeholder = isDirect
-    ? "직접 작성할 점검결과를 입력하거나, 아래 버튼으로 데이터에 등록하세요."
-    : "미리 작성된 점검결과를 선택 중입니다.";
+  $("#result-sample").value = "";
+  $("#actionType").disabled = false;
+  $("#new-result-content").disabled = false;
+  $("#new-result-content").placeholder = "직접 작성할 점검결과를 입력하세요.";
 }

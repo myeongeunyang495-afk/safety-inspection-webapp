@@ -1,0 +1,14 @@
+{
+  "name": "safety-inspection-webapp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "start:python": "python app.py",
+    "dev:netlify": "netlify dev"
+  }
+  ,
+  "dependencies": {
+    "@netlify/blobs": "latest"
+  }
+}

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>수도권서부본부 안전보건처 점검결과 관리</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>수도권서부본부 안전보건처 점검결과 관리</h1>
+        <p>안전·보건 점검 기록과 조치 통계를 한곳에 모읍니다.</p>
+      </div>
+      <nav class="tabs" aria-label="화면 전환">
+        <button class="tab is-active" data-view="write">작성</button>
+        <button class="tab" data-view="list">결과</button>
+        <button class="tab" data-view="stats">통계</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="write" class="view is-active" aria-labelledby="write-title">
+        <div class="section-heading">
+          <h2 id="write-title">점검결과 작성</h2>
+          <span id="save-status" role="status"></span>
+        </div>
+
+        <form id="inspection-form" class="inspection-form">
+          <div id="form-top" class="grid two">
+            <label>
+              <span>점검테마</span>
+              <select id="theme" name="theme" required></select>
+            </label>
+            <label>
+              <span>점검일시</span>
+              <input id="inspectedAt" name="inspectedAt" type="datetime-local" required>
+            </label>
+          </div>
+
+          <div class="grid">
+            <label>
+              <span>세부 점검테마</span>
+              <select id="detailTheme" name="detailTheme"></select>
+            </label>
+          </div>
+
+          <div class="inline-add">
+            <label>
+              <span>새로운 세부 점검테마 등록</span>
+              <input id="new-detail-theme" type="text" placeholder="예: 화학물질 취급">
+            </label>
+            <button type="button" id="add-detail-theme">등록</button>
+          </div>
+
+          <aside class="law-panel" aria-live="polite">
+            <div>
+              <strong>국가법령정보센터 관련 법령</strong>
+              <span id="law-theme-name"></span>
+            </div>
+            <ul id="theme-laws"></ul>
+          </aside>
+
+          <div class="grid two">
+            <label>
+              <span>점검대상 구분</span>
+              <select id="targetOwner" name="targetOwner" required>
+                <option>철도공사</option>
+                <option>수급업체(공사업체 포함)</option>
+              </select>
+            </label>
+            <label>
+              <span>점검대상</span>
+              <select id="targetCategory" name="targetCategory" required></select>
+            </label>
+          </div>
+
+          <div class="grid two">
+            <label>
+              <span>세부 소속명</span>
+              <input id="targetDetail" name="targetDetail" type="text" placeholder="예: 서울역, ○○사업소, ○○공사 현장">
+            </label>
+            <div class="contractor-add">
+              <label>
+                <span>수급업체 추가 등록</span>
+                <input id="new-contractor" type="text" placeholder="업체명 입력">
+              </label>
+              <button type="button" id="add-contractor">등록</button>
+            </div>
+          </div>
+
+          <fieldset class="checkbox-panel">
+            <legend>점검자</legend>
+            <div id="inspector-options" class="checkbox-grid"></div>
+            <div class="person-add">
+              <input id="new-inspector" type="text" placeholder="인원 추가">
+              <button type="button" id="add-inspector">등록</button>
+            </div>
+          </fieldset>
+
+          <div class="grid two">
+            <label>
+              <span>미리 작성된 점검결과</span>
+              <select id="result-sample">
+                <option value="">직접 작성</option>
+              </select>
+            </label>
+            <label>
+              <span>조치 구분</span>
+              <select id="actionType" name="actionType">
+                <option>즉시조치완료</option>
+                <option>조치필요</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="sample-save">
+            <label>
+              <span>새로운 점검결과 내용</span>
+              <textarea id="new-result-content" rows="4" placeholder="새로운 점검결과 작성 및 등록"></textarea>
+            </label>
+            <button type="button" id="save-sample">점검결과 데이터에 등록</button>
+          </div>
+
+          <div class="photo-grid single">
+            <div class="photo-box">
+              <div class="photo-title">조치 전 사진</div>
+              <img id="before-preview" alt="조치 전 사진 미리보기">
+              <input id="beforePhoto" type="file" accept="image/*">
+            </div>
+          </div>
+
+          <button class="primary" type="submit">점검결과 저장</button>
+        </form>
+      </section>
+
+      <section id="list" class="view" aria-labelledby="list-title">
+        <div class="section-heading">
+          <h2 id="list-title">점검결과 확인</h2>
+          <select id="filter-theme" aria-label="테마 필터"></select>
+        </div>
+        <div id="inspection-list" class="inspection-list"></div>
+      </section>
+
+      <section id="stats" class="view" aria-labelledby="stats-title">
+        <div class="section-heading">
+          <h2 id="stats-title">통계</h2>
+          <span id="total-count"></span>
+        </div>
+        <div class="stats-layout">
+          <section class="panel">
+            <h3>테마별 조치사항</h3>
+            <div id="theme-stats"></div>
+          </section>
+          <section class="panel">
+            <h3>조치 구분별 건수</h3>
+            <div id="action-stats"></div>
+          </section>
+          <section class="panel wide">
+            <h3>점검대상 월별 방문 횟수</h3>
+            <div id="target-month-stats"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="brand-footer" aria-label="기관 정보">
+      <strong class="korail-logo">KORAIL</strong>
+      <span>수도권서부본부</span>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

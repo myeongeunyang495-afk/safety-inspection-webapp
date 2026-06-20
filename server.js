@@ -97,10 +97,6 @@ function readDb() {
       changed = true;
     }
   }
-  if (db.resultSamples?.length) {
-    db.resultSamples = [];
-    changed = true;
-  }
   for (const item of db.inspections || []) {
     if (["A 조치", "교육", "점검완료"].includes(item.actionType)) {
       item.actionType = "즉시조치완료";
@@ -475,9 +471,20 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === "POST" && pathname === "/api/result-samples") {
-    db.resultSamples = [];
+    const body = await readBody(req);
+    db.resultSamples ||= [];
+    const sample = {
+      id: crypto.randomUUID(),
+      title: String(body.title || "").trim() || "새 점검결과",
+      content: String(body.content || "").trim(),
+      actionType: String(body.actionType || "즉시조치완료").trim()
+    };
+    if (!sample.content) return sendJson(res, 400, { message: "점검결과 내용이 필요합니다." });
+    const exists = db.resultSamples.find((item) => item.content === sample.content);
+    if (exists) return sendJson(res, 200, { sample: exists, resultSamples: db.resultSamples });
+    db.resultSamples.unshift(sample);
     writeDb(db);
-    return sendJson(res, 200, { resultSamples: [] });
+    return sendJson(res, 201, { sample, resultSamples: db.resultSamples });
   }
 
   if (req.method === "POST" && pathname === "/api/inspections") {

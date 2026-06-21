@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="utf-8">
@@ -154,6 +154,13 @@
           <span id="selected-count" role="status">선택 0건</span>
         </div>
         <div id="inspection-list" class="inspection-list"></div>
+        <section class="trash-panel rounded-2xl border border-red-100 bg-white/95 p-4 shadow-sm" aria-labelledby="trash-title">
+          <div class="section-heading">
+            <h3 id="trash-title">휴지통</h3>
+            <span>삭제한 점검결과와 삭제자를 확인합니다.</span>
+          </div>
+          <div id="trash-list" class="trash-list"></div>
+        </section>
       </section>
 
       <section id="stats" class="view rounded-2xl" aria-labelledby="stats-title">
@@ -186,6 +193,7 @@
     <script src="/app.js?v=20260621-detail-storage"></script>
   </body>
 </html>
+
 
 
 

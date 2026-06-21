@@ -9,6 +9,7 @@ const state = {
   visibleResultSampleIds: new Set(),
   inspections: [],
   trash: [],
+  trashVisible: false,
   stats: { total: 0, byTheme: [], byAction: {}, targetByMonth: {} },
   storageClient: null,
   storageEnabled: false,
@@ -217,7 +218,7 @@ function renderList() {
     <article class="inspection-card" data-id="${escapeHtml(item.id)}">
       <label class="inspection-select">
         <input type="checkbox" data-action="select-inspection" data-id="${escapeHtml(item.id)}" ${state.selectedInspectionIds.has(item.id) ? "checked" : ""}>
-        <span>다운로드 선택</span>
+        <span>선택</span>
       </label>
       <button class="inspection-summary" type="button" data-action="toggle-detail" data-id="${escapeHtml(item.id)}">
         <span><span class="summary-label">테마 / 세부테마</span><strong>${escapeHtml(item.theme)} / ${escapeHtml(item.detailTheme || "-")}</strong></span>
@@ -239,7 +240,6 @@ function renderList() {
         <div class="download-actions">
           <button type="button" data-action="download-doc" data-id="${escapeHtml(item.id)}">한글파일 다운로드</button>
           <button type="button" data-action="download-excel" data-id="${escapeHtml(item.id)}">엑셀파일 다운로드</button>
-          <button type="button" class="danger-button" data-action="delete-inspection" data-id="${escapeHtml(item.id)}">데이터 삭제</button>
         </div>
       </div>
     </article>
@@ -272,6 +272,8 @@ function renderBulkDownloadState(items = filteredInspectionItems()) {
   }
   $("#download-selected-doc").disabled = !selectedVisibleCount;
   $("#download-selected-excel").disabled = !selectedVisibleCount;
+  const deleteSelected = $("#delete-selected");
+  if (deleteSelected) deleteSelected.disabled = !visibleIds.length;
   $("#selected-count").textContent = `선택 ${selectedVisibleCount}건`;
 }
 
@@ -655,6 +657,38 @@ async function downloadSelectedInspections(type) {
   }
 }
 
+async function deleteSelectedInspections() {
+  const selectedIds = new Set(state.selectedInspectionIds);
+  $("#inspection-list [data-action=\"select-inspection\"]:checked").forEach((checkbox) => {
+    selectedIds.add(checkbox.dataset.id);
+  });
+  const items = filteredInspectionItems().filter((item) => selectedIds.has(item.id));
+  if (!items.length) return showAlert("삭제할 점검결과를 선택하세요.");
+  if (!window.confirm("정말 삭제하시겠습니까?")) return;
+  const deletedBy = window.prompt("삭제자 이름을 입력하세요.");
+  if (!deletedBy || !deletedBy.trim()) return showAlert("삭제자 이름을 입력해야 삭제할 수 있습니다.");
+  const button = $("#delete-selected");
+  try {
+    if (button) button.disabled = true;
+    const ids = items.map((item) => item.id);
+    const data = await api("/api/inspections/delete-bulk", {
+      method: "POST",
+      body: JSON.stringify({ ids, deletedBy: deletedBy.trim() })
+    });
+    state.inspections = data.inspections;
+    state.trash = data.trash || [];
+    state.stats = data.stats;
+    for (const id of ids) state.selectedInspectionIds.delete(id);
+    renderList();
+    renderStats();
+    renderTrash();
+    setStatus(`선택한 점검결과 ${ids.length}건이 휴지통으로 이동했습니다.`);
+  } catch (error) {
+    showAlert(error.message);
+  } finally {
+    renderBulkDownloadState();
+  }
+}
 function activateView(viewId) {
   $$(".tab").forEach((item) => item.classList.toggle("is-active", item.dataset.view === viewId));
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewId));
@@ -721,6 +755,14 @@ function bindEvents() {
   });
   $("#download-selected-doc").addEventListener("click", () => downloadSelectedInspections("doc"));
   $("#download-selected-excel").addEventListener("click", () => downloadSelectedInspections("excel"));
+  $("#delete-selected").addEventListener("click", deleteSelectedInspections);
+  const toggleTrash = $("#toggle-trash");
+  if (toggleTrash) {
+    toggleTrash.addEventListener("click", () => {
+      state.trashVisible = !state.trashVisible;
+      renderTrash();
+    });
+  }
 
   $("#inspection-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-action]");
@@ -729,30 +771,6 @@ function bindEvents() {
     if (!item) return;
     if (button.dataset.action === "toggle-detail") {
       button.closest(".inspection-card").classList.toggle("is-open");
-    }
-    if (button.dataset.action === "delete-inspection") {
-      const deletedBy = window.prompt("삭제자 이름을 입력하세요.");
-      if (!deletedBy || !deletedBy.trim()) return showAlert("삭제자 이름을 입력해야 삭제할 수 있습니다.");
-      if (!window.confirm("선택한 점검결과를 휴지통으로 이동할까요?")) return;
-      try {
-        button.disabled = true;
-        const data = await api("/api/inspections/delete", {
-          method: "POST",
-          body: JSON.stringify({ id: item.id, deletedBy: deletedBy.trim() })
-        });
-        state.inspections = data.inspections;
-        state.trash = data.trash || [];
-        state.stats = data.stats;
-        state.selectedInspectionIds.delete(item.id);
-        renderList();
-        renderStats();
-        renderTrash();
-        setStatus("점검결과가 휴지통으로 이동했습니다.");
-      } catch (error) {
-        showAlert(error.message);
-      } finally {
-        button.disabled = false;
-      }
     }
     if (button.dataset.action === "download-doc" || button.dataset.action === "download-excel") {
       try {
@@ -915,6 +933,7 @@ function updateResultMode() {
     ? "직접 작성할 점검결과를 입력하거나, 아래 버튼으로 데이터에 등록하세요."
     : "등록된 점검결과를 선택 중입니다.";
 }
+
 
 
 

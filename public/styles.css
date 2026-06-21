@@ -674,8 +674,35 @@ button:hover {
   background: #ffe8e8;
 }
 
-.trash-panel {
+.trash-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: 16px;
+  margin-bottom: 10px;
+}
+
+.trash-toggle {
+  border: 1px solid #f1b3b3;
+  border-radius: 8px;
+  background: #fff7f7;
+  color: #a53030;
+  font-weight: 800;
+}
+
+.trash-toggle:hover {
+  border-color: #c84444;
+  background: #ffecec;
+}
+
+.trash-panel {
+  margin-top: 0;
+}
+
+.trash-panel[hidden] {
+  display: none;
 }
 
 .trash-list {
@@ -798,6 +825,7 @@ button:hover {
     white-space: nowrap;
   }
 }
+
 
 
 

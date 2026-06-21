@@ -58,6 +58,7 @@ function mergeDefaults(db) {
   for (const [theme, laws] of Object.entries(defaultDb.themeLaws)) {
     if (!(theme in next.themeLaws)) next.themeLaws[theme] = [...laws];
   }
+  next.trash ||= [];
   for (const item of next.inspections || []) {
     if (["A 조치", "교육", "점검완료"].includes(item.actionType)) item.actionType = "즉시조치완료";
     if (["B 조치", "C 조치"].includes(item.actionType)) item.actionType = "조치필요";
@@ -415,6 +416,21 @@ export default async function handler(request) {
       return json(201, { sample, resultSamples: db.resultSamples });
     }
 
+
+    if (request.method === "POST" && path === "/inspections/delete") {
+      const body = await request.json();
+      const id = String(body.id || "").trim();
+      const deletedBy = String(body.deletedBy || "").trim();
+      if (!id) return json(400, { message: "삭제할 점검결과를 선택하세요." });
+      if (!deletedBy) return json(400, { message: "삭제자 이름을 입력하세요." });
+      const index = db.inspections.findIndex((item) => item.id === id);
+      if (index < 0) return json(404, { message: "점검결과를 찾을 수 없습니다." });
+      const [inspection] = db.inspections.splice(index, 1);
+      db.trash ||= [];
+      db.trash.unshift({ ...inspection, deletedBy, deletedAt: new Date().toISOString() });
+      await writeDb(db);
+      return json(200, { inspections: db.inspections, trash: db.trash, stats: buildStats(db) });
+    }
     if (request.method === "POST" && path === "/inspections") {
       const body = await request.json();
       const inspection = normalizeInspection(body);
@@ -434,5 +450,6 @@ export default async function handler(request) {
     return json(500, { message: error.message || "서버 오류가 발생했습니다." });
   }
 }
+
 
 

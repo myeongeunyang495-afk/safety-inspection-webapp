@@ -1,5 +1,7 @@
 import { getStore } from "@netlify/blobs";
 
+const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 const defaultDb = {
   themes: ["중처법 점검", "계절별 점검", "도급사업 점검", "보건대행 점검"],
   detailThemes: ["MSDS", "밀폐공간", "휴게시설"],
@@ -42,6 +44,15 @@ function json(status, payload) {
   });
 }
 
+function purgeTrash(db) {
+  const cutoff = Date.now() - TRASH_RETENTION_MS;
+  const before = (db.trash || []).length;
+  db.trash = (db.trash || []).filter((item) => {
+    const deletedAt = new Date(item.deletedAt).getTime();
+    return Number.isNaN(deletedAt) || deletedAt >= cutoff;
+  });
+  return db.trash.length !== before;
+}
 function mergeDefaults(db) {
   const next = db || structuredClone(defaultDb);
   for (const [key, value] of Object.entries(defaultDb)) {
@@ -59,6 +70,7 @@ function mergeDefaults(db) {
     if (!(theme in next.themeLaws)) next.themeLaws[theme] = [...laws];
   }
   next.trash ||= [];
+  purgeTrash(next);
   for (const item of next.inspections || []) {
     if (["A 조치", "교육", "점검완료"].includes(item.actionType)) item.actionType = "즉시조치완료";
     if (["B 조치", "C 조치"].includes(item.actionType)) item.actionType = "조치필요";
@@ -69,8 +81,9 @@ function mergeDefaults(db) {
 async function readDb() {
   const store = getStore({ name: "inspection-db", consistency: "strong" });
   const db = await store.get("db", { type: "json" });
+  const before = db ? JSON.stringify(db) : "";
   const merged = mergeDefaults(db);
-  if (!db) await writeDb(merged);
+  if (!db || JSON.stringify(merged) !== before) await writeDb(merged);
   return merged;
 }
 
@@ -417,6 +430,27 @@ export default async function handler(request) {
     }
 
 
+    if (request.method === "POST" && path === "/inspections/delete-bulk") {
+      const body = await request.json();
+      const ids = Array.isArray(body.ids) ? body.ids.map((id) => String(id || "").trim()).filter(Boolean) : [];
+      const deletedBy = String(body.deletedBy || "").trim();
+      if (!ids.length) return json(400, { message: "삭제할 점검결과를 선택하세요." });
+      if (!deletedBy) return json(400, { message: "삭제자 이름을 입력하세요." });
+      const idSet = new Set(ids);
+      const deleted = [];
+      db.inspections = (db.inspections || []).filter((item) => {
+        if (!idSet.has(item.id)) return true;
+        deleted.push(item);
+        return false;
+      });
+      if (!deleted.length) return json(404, { message: "점검결과를 찾을 수 없습니다." });
+      db.trash ||= [];
+      const deletedAt = new Date().toISOString();
+      db.trash.unshift(...deleted.map((inspection) => ({ ...inspection, deletedBy, deletedAt })));
+      purgeTrash(db);
+      await writeDb(db);
+      return json(200, { inspections: db.inspections, trash: db.trash, stats: buildStats(db) });
+    }
     if (request.method === "POST" && path === "/inspections/delete") {
       const body = await request.json();
       const id = String(body.id || "").trim();
@@ -428,6 +462,7 @@ export default async function handler(request) {
       const [inspection] = db.inspections.splice(index, 1);
       db.trash ||= [];
       db.trash.unshift({ ...inspection, deletedBy, deletedAt: new Date().toISOString() });
+      purgeTrash(db);
       await writeDb(db);
       return json(200, { inspections: db.inspections, trash: db.trash, stats: buildStats(db) });
     }
@@ -450,6 +485,8 @@ export default async function handler(request) {
     return json(500, { message: error.message || "서버 오류가 발생했습니다." });
   }
 }
+
+
 
 
 

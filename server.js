@@ -1,4 +1,4 @@
-const http = require("http");
+﻿const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -182,6 +182,7 @@ function normalizeInspection(payload) {
     resultText,
     actionType: String(payload.actionType || "즉시조치완료").trim(),
     beforePhoto: payload.beforePhoto || "",
+    beforePhotoPath: payload.beforePhotoPath || "",
     afterPhoto: payload.afterPhoto || "",
     createdAt: new Date().toISOString()
   };
@@ -541,3 +542,5 @@ ensureDb();
 server.listen(PORT, () => {
   console.log(`Safety inspection app running at http://localhost:${PORT}`);
 });
+
+

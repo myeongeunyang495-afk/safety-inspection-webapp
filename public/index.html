@@ -1,13 +1,15 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>수도권서부본부 안전보건처 점검결과 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
-  <body>
-    <header class="topbar">
+  <body class="min-h-screen bg-slate-100 text-slate-900">
+    <header class="topbar sticky top-0 z-20 shadow-lg shadow-blue-950/10 backdrop-blur">
       <div>
         <h1>수도권서부본부 안전보건처 점검결과 관리</h1>
         <p>안전·보건 점검 기록과 조치 통계를 한곳에 모읍니다.</p>
@@ -19,14 +21,14 @@
       </nav>
     </header>
 
-    <main>
-      <section id="write" class="view is-active" aria-labelledby="write-title">
-        <div class="section-heading">
+    <main class="mx-auto grid w-full max-w-7xl gap-5 px-3 py-4 sm:px-5 lg:px-8">
+      <section id="write" class="view is-active rounded-2xl" aria-labelledby="write-title">
+        <div class="section-heading rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-blue-100">
           <h2 id="write-title">점검결과 작성</h2>
           <span id="save-status" role="status"></span>
         </div>
 
-        <form id="inspection-form" class="inspection-form">
+        <form id="inspection-form" class="inspection-form rounded-2xl border border-blue-100 bg-white/95 shadow-sm">
           <div id="form-top" class="grid two">
             <label>
               <span>점검테마</span>
@@ -100,9 +102,9 @@
 
           <div class="grid two">
             <label>
-              <span>미리 작성된 점검결과</span>
+              <span>점검결과</span>
               <select id="result-sample">
-                <option value="">직접 작성</option>
+                <option value="">직접작성</option>
               </select>
             </label>
             <label>
@@ -119,7 +121,7 @@
               <span>새로운 점검결과 내용</span>
               <textarea id="new-result-content" rows="4" placeholder="새로운 점검결과 작성 및 등록"></textarea>
             </label>
-            <button type="button" id="save-sample">점검결과 데이터에 등록</button>
+            <button type="button" id="save-result-sample">점검결과 데이터 등록</button>
           </div>
 
           <div class="photo-grid single">
@@ -130,26 +132,38 @@
             </div>
           </div>
 
-          <button class="primary" type="submit">점검결과 저장</button>
+          <button class="primary rounded-xl shadow-sm" type="submit">점검결과 저장</button>
         </form>
       </section>
 
-      <section id="list" class="view" aria-labelledby="list-title">
-        <div class="section-heading">
+      <section id="list" class="view rounded-2xl" aria-labelledby="list-title">
+        <div class="section-heading rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-blue-100">
           <h2 id="list-title">점검결과 확인</h2>
-          <select id="filter-theme" aria-label="테마 필터"></select>
+          <div class="result-controls">
+            <select id="filter-theme" aria-label="점검테마 필터"></select>
+            <select id="filter-detail-theme" aria-label="세부점검테마 필터"></select>
+          </div>
+        </div>
+        <div class="bulk-download-panel rounded-2xl border border-blue-100 bg-white/95 shadow-sm" aria-label="선택한 점검결과 일괄 다운로드">
+          <label class="bulk-select-all">
+            <input id="select-all-inspections" type="checkbox">
+            <span>현재 결과 전체 선택</span>
+          </label>
+          <button type="button" id="download-selected-doc">선택 한글파일 다운로드</button>
+          <button type="button" id="download-selected-excel">선택 엑셀파일 다운로드</button>
+          <span id="selected-count" role="status">선택 0건</span>
         </div>
         <div id="inspection-list" class="inspection-list"></div>
       </section>
 
-      <section id="stats" class="view" aria-labelledby="stats-title">
-        <div class="section-heading">
+      <section id="stats" class="view rounded-2xl" aria-labelledby="stats-title">
+        <div class="section-heading rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-blue-100">
           <h2 id="stats-title">통계</h2>
           <span id="total-count"></span>
         </div>
         <div class="stats-layout">
           <section class="panel">
-            <h3>테마별 조치사항</h3>
+            <h3>세부테마별 조치사항</h3>
             <div id="theme-stats"></div>
           </section>
           <section class="panel">
@@ -169,6 +183,9 @@
       <span>수도권서부본부</span>
     </footer>
 
-    <script src="/app.js"></script>
+    <script src="/app.js?v=20260621-detail-storage"></script>
   </body>
 </html>
+
+
+

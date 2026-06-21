@@ -1,4 +1,4 @@
-const state = {
+﻿const state = {
   themes: [],
   themeLaws: {},
   detailThemes: [],
@@ -6,11 +6,11 @@ const state = {
   contractors: [],
   inspectors: [],
   resultSamples: [],
+  visibleResultSampleIds: new Set(),
   inspections: [],
   stats: { total: 0, byTheme: [], byAction: {}, targetByMonth: {} },
-  supabase: null,
-  supabaseUser: null,
-  supabaseEnabled: false,
+  storageClient: null,
+  storageEnabled: false,
   selectedInspectionIds: new Set(),
   photos: {
     beforePhoto: ""
@@ -45,57 +45,52 @@ async function api(path, options = {}) {
   return data;
 }
 
-async function initSupabase() {
+async function initPhotoStorage() {
   try {
     const config = await api("/api/config");
-    if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase) {
-      renderAuthState("Supabase 미설정: 현재는 공용 저장 방식입니다.");
-      return;
-    }
-    state.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-    state.supabaseEnabled = true;
-    const { data } = await state.supabase.auth.getUser();
-    state.supabaseUser = data.user || null;
-    state.supabase.auth.onAuthStateChange(async (_event, session) => {
-      state.supabaseUser = session?.user || null;
-      renderAuthState();
-      await loadSupabaseInspections();
-    });
-    if (!state.supabaseUser) await signInAnonymously();
-    renderAuthState();
+    if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase) return;
+    state.storageClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+    state.storageEnabled = true;
   } catch (error) {
-    renderAuthState(`Supabase 설정 확인 실패: ${error.message}`);
+    setStatus(`사진 저장소 연결 실패: ${error.message}`);
   }
 }
 
-function renderAuthState(message = "") {
-  const panel = $("#auth-panel");
-  if (!panel) return;
-  const status = $("#auth-status");
-  const signedIn = Boolean(state.supabaseUser);
-  panel.classList.toggle("is-disabled", !state.supabaseEnabled);
-  if (message) {
-    status.textContent = message;
-  } else if (!state.supabaseEnabled) {
-    status.textContent = "Supabase 환경변수를 설정하면 개인별 자동 저장이 켜집니다.";
-  } else if (signedIn) {
-    status.textContent = "개인 저장공간에 자동 저장 중";
-  } else {
-    status.textContent = "개인 저장공간을 준비 중입니다.";
-  }
+function dataUrlToBlob(dataUrl) {
+  const match = String(dataUrl || "").match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  const bytes = Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0));
+  return new Blob([bytes], { type: match[1] });
 }
 
-async function signInAnonymously() {
-  if (!state.supabaseEnabled || !state.supabase) return;
-  renderAuthState("개인 저장공간을 준비 중입니다.");
-  const { data, error } = await state.supabase.auth.signInAnonymously();
+function storagePublicUrl(path) {
+  if (!path || !state.storageClient) return "";
+  const { data } = state.storageClient.storage.from("inspection-photos").getPublicUrl(path);
+  return data?.publicUrl || "";
+}
+
+async function uploadPhotoToStorage(dataUrl) {
+  if (!dataUrl || !state.storageEnabled || !state.storageClient) return { beforePhoto: dataUrl };
+  const blob = dataUrlToBlob(dataUrl);
+  if (!blob) return { beforePhoto: dataUrl };
+  const path = `public/${Date.now()}-${crypto.randomUUID()}.jpg`;
+  const { error } = await state.storageClient.storage
+    .from("inspection-photos")
+    .upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: false });
   if (error) {
-    renderAuthState("Supabase Anonymous sign-ins를 켜야 개인별 자동 저장을 사용할 수 있습니다.");
-    throw error;
+    setStatus(`Supabase 사진 저장 실패: ${error.message}`);
+    return { beforePhoto: dataUrl };
   }
-  state.supabaseUser = data.user || null;
+  return { beforePhoto: storagePublicUrl(path), beforePhotoPath: path };
 }
 
+function hydrateStoragePhotos() {
+  if (!state.storageClient) return;
+  state.inspections = state.inspections.map((item) => {
+    if (!item.beforePhotoPath) return item;
+    return { ...item, beforePhoto: storagePublicUrl(item.beforePhotoPath) || item.beforePhoto };
+  });
+}
 function fillSelect(select, items, placeholder) {
   select.innerHTML = "";
   if (placeholder) {
@@ -137,7 +132,17 @@ function renderFormOptions() {
   renderTargetOptions(currentTarget);
 
   const sampleSelect = $("#result-sample");
-  sampleSelect.value = "직접작성";
+  const selectedSample = sampleSelect.value;
+  sampleSelect.innerHTML = '<option value="">직접작성</option>';
+  for (const sample of state.resultSamples.filter((item) => state.visibleResultSampleIds.has(item.id))) {
+    const option = document.createElement("option");
+    option.value = sample.id;
+    option.textContent = sample.title;
+    sampleSelect.append(option);
+  }
+  if ([...sampleSelect.options].some((option) => option.value === selectedSample)) {
+    sampleSelect.value = selectedSample;
+  }
   renderInspectors();
   renderThemeLaws();
   updateResultMode();
@@ -163,6 +168,11 @@ function renderInspectors() {
 
 function getSelectedInspectors() {
   return $$('input[name="inspectors"]:checked').map((item) => item.value);
+}
+
+function selectedResultSample() {
+  const value = $("#result-sample").value;
+  return state.resultSamples.find((item) => item.id === value);
 }
 
 function renderThemeLaws() {
@@ -208,7 +218,7 @@ function renderList() {
         <span>다운로드 선택</span>
       </label>
       <button class="inspection-summary" type="button" data-action="toggle-detail" data-id="${escapeHtml(item.id)}">
-        <span><span class="summary-label">테마</span><strong>${escapeHtml(item.theme)}</strong></span>
+        <span><span class="summary-label">테마 / 세부테마</span><strong>${escapeHtml(item.theme)} / ${escapeHtml(item.detailTheme || "-")}</strong></span>
         <span><span class="summary-label">일시</span>${formatDate(item.inspectedAt)}</span>
         <span><span class="summary-label">대상</span>${escapeHtml(displayTarget(item))}</span>
         <span><span class="summary-label">점검자</span>${escapeHtml(displayInspectors(item))}</span>
@@ -353,9 +363,10 @@ function buildStatsFromInspections(inspections) {
   const targetByMonth = {};
 
   for (const item of inspections) {
-    byTheme[item.theme] ||= { theme: item.theme, total: 0, actions: {} };
-    byTheme[item.theme].total += 1;
-    byTheme[item.theme].actions[item.actionType] = (byTheme[item.theme].actions[item.actionType] || 0) + 1;
+    const detailTheme = item.detailTheme || "세부테마 미지정";
+    byTheme[detailTheme] ||= { theme: detailTheme, total: 0, actions: {} };
+    byTheme[detailTheme].total += 1;
+    byTheme[detailTheme].actions[item.actionType] = (byTheme[detailTheme].actions[item.actionType] || 0) + 1;
     byAction[item.actionType] = (byAction[item.actionType] || 0) + 1;
 
     const date = new Date(item.inspectedAt);
@@ -371,86 +382,6 @@ function buildStatsFromInspections(inspections) {
     byAction,
     targetByMonth
   };
-}
-
-function dataUrlToBlob(dataUrl) {
-  const match = String(dataUrl || "").match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) return null;
-  const bytes = Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0));
-  return new Blob([bytes], { type: match[1] });
-}
-
-async function signedPhotoUrl(path) {
-  if (!path || !state.supabase) return "";
-  const { data, error } = await state.supabase.storage
-    .from("inspection-photos")
-    .createSignedUrl(path, 60 * 60);
-  if (error) return "";
-  return data.signedUrl;
-}
-
-async function uploadSupabasePhoto(dataUrl) {
-  const blob = dataUrlToBlob(dataUrl);
-  if (!blob || !state.supabaseUser) return "";
-  const path = `${state.supabaseUser.id}/${Date.now()}-${crypto.randomUUID()}.jpg`;
-  const { error } = await state.supabase.storage
-    .from("inspection-photos")
-    .upload(path, blob, {
-      contentType: blob.type || "image/jpeg",
-      upsert: false
-    });
-  if (error) throw error;
-  return path;
-}
-
-async function hydrateSupabaseInspection(row) {
-  const item = { id: row.id, ...(row.payload || {}) };
-  if (item.beforePhotoPath) item.beforePhoto = await signedPhotoUrl(item.beforePhotoPath);
-  return item;
-}
-
-async function loadSupabaseInspections() {
-  if (!state.supabaseEnabled) return;
-  if (!state.supabaseUser) {
-    state.inspections = [];
-    state.stats = buildStatsFromInspections(state.inspections);
-    renderFormOptions();
-    renderList();
-    renderStats();
-    return;
-  }
-  const { data, error } = await state.supabase
-    .from("inspections")
-    .select("id,payload,created_at")
-    .eq("user_id", state.supabaseUser.id)
-    .order("created_at", { ascending: false });
-  if (error) {
-    setStatus(error.message);
-    return;
-  }
-  state.inspections = await Promise.all((data || []).map(hydrateSupabaseInspection));
-  state.stats = buildStatsFromInspections(state.inspections);
-  renderFormOptions();
-  renderList();
-  renderStats();
-}
-
-async function saveSupabaseInspection(payload) {
-  if (!state.supabaseUser) throw new Error("개인 저장공간 준비 후 저장할 수 있습니다.");
-  const next = { ...payload };
-  if (next.beforePhoto) {
-    next.beforePhotoPath = await uploadSupabasePhoto(next.beforePhoto);
-    next.beforePhoto = await signedPhotoUrl(next.beforePhotoPath);
-  }
-  const { data, error } = await state.supabase
-    .from("inspections")
-    .insert({ user_id: state.supabaseUser.id, payload: next })
-    .select("id,payload,created_at")
-    .single();
-  if (error) throw error;
-  const saved = await hydrateSupabaseInspection(data);
-  state.inspections = [saved, ...state.inspections];
-  state.stats = buildStatsFromInspections(state.inspections);
 }
 
 function escapeHtml(value) {
@@ -474,6 +405,11 @@ function setStatus(message) {
   }, 3000);
 }
 
+function showAlert(message) {
+  window.alert(message);
+  setStatus(message);
+}
+
 function readPhoto(input, key, preview) {
   const file = input.files[0];
   if (!file) return;
@@ -482,11 +418,19 @@ function readPhoto(input, key, preview) {
     const compressed = await compressImage(reader.result);
     state.photos[key] = compressed;
     preview.src = compressed;
+    const originalKb = Math.max(1, Math.round(file.size / 1024));
+    const compressedKb = Math.max(1, Math.round(estimatedDataUrlBytes(compressed) / 1024));
+    setStatus(`사진 압축 완료: ${originalKb}KB -> ${compressedKb}KB`);
   };
   reader.readAsDataURL(file);
 }
 
-function compressImage(dataUrl, maxSize = 900, quality = 0.62) {
+function estimatedDataUrlBytes(dataUrl) {
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  return Math.floor((base64.length * 3) / 4);
+}
+
+function compressImage(dataUrl, maxSize = 720, quality = 0.58) {
   return new Promise((resolve) => {
     const image = new Image();
     image.onload = () => {
@@ -697,14 +641,11 @@ function activateView(viewId) {
 async function loadData() {
   const data = await api("/api/bootstrap");
   Object.assign(state, data);
+  hydrateStoragePhotos();
   renderFormOptions();
   await loadLaws();
-  if (state.supabaseEnabled) {
-    await loadSupabaseInspections();
-  } else {
-    renderList();
-    renderStats();
-  }
+  renderList();
+  renderStats();
 }
 
 function bindEvents() {
@@ -719,6 +660,32 @@ function bindEvents() {
   $("#targetOwner").addEventListener("change", () => renderTargetOptions());
   $("#filter-theme").addEventListener("change", renderList);
   $("#filter-detail-theme").addEventListener("change", renderList);
+  $("#save-result-sample").addEventListener("click", async () => {
+    const content = $("#new-result-content").value.trim();
+    if (!content) return setStatus("등록할 점검결과 내용을 입력하세요.");
+    const duplicate = state.resultSamples.find((item) => item.content === content);
+    if (duplicate) {
+      state.visibleResultSampleIds.add(duplicate.id);
+      renderFormOptions();
+      $("#result-sample").value = duplicate.id;
+      updateResultMode();
+      return setStatus("이미 등록된 점검결과를 선택했습니다.");
+    }
+    const data = await api("/api/result-samples", {
+      method: "POST",
+      body: JSON.stringify({
+        title: content.length > 28 ? `${content.slice(0, 28)}...` : content,
+        content,
+        actionType: $("#actionType").value
+      })
+    });
+    state.resultSamples = data.resultSamples;
+    state.visibleResultSampleIds.add(data.sample.id);
+    renderFormOptions();
+    $("#result-sample").value = data.sample.id;
+    updateResultMode();
+    setStatus("점검결과 데이터에 등록되었습니다.");
+  });
   $("#select-all-inspections").addEventListener("change", (event) => {
     const items = filteredInspectionItems();
     for (const item of items) {
@@ -827,9 +794,10 @@ function bindEvents() {
   $("#inspection-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const inspectors = getSelectedInspectors();
-    if (!inspectors.length) return setStatus("점검자를 한 명 이상 선택하세요.");
+    if (!inspectors.length) return showAlert("점검자를 한 명 이상 선택하세요.");
+    const sample = selectedResultSample();
     const directText = $("#new-result-content").value.trim();
-    if (!directText) return setStatus("직접작성 점검결과 내용을 입력하세요.");
+    if (!sample && !directText) return showAlert("점검결과를 작성하거나 등록된 점검결과를 선택하세요.");
     const payload = {
       theme: $("#theme").value,
       detailTheme: $("#detailTheme").value,
@@ -839,21 +807,18 @@ function bindEvents() {
       targetCategory: $("#targetCategory").value,
       targetDetail: $("#targetDetail").value.trim(),
       inspectors,
-      resultTitle: "",
-      resultText: directText,
-      actionType: $("#actionType").value,
+      resultTitle: sample?.title || "",
+      resultText: sample?.content || directText,
+      actionType: sample?.actionType || $("#actionType").value,
       beforePhoto: state.photos.beforePhoto
     };
-    if (state.supabaseEnabled) {
-      await saveSupabaseInspection(payload);
-    } else {
-      const data = await api("/api/inspections", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      state.inspections = data.inspections;
-      state.stats = data.stats;
-    }
+    if (payload.beforePhoto) Object.assign(payload, await uploadPhotoToStorage(payload.beforePhoto));
+    const data = await api("/api/inspections", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    state.inspections = data.inspections;
+    state.stats = data.stats;
     state.themes = [...new Set([...state.themes, payload.theme])];
     renderFormOptions();
     $("#filter-theme").value = "전체";
@@ -861,13 +826,14 @@ function bindEvents() {
     renderList();
     renderStats();
     event.target.reset();
+    updateResultMode();
     $("#inspectedAt").value = todayLocalDateTime();
     $("#before-preview").removeAttribute("src");
     state.photos.beforePhoto = "";
     state.currentLaws = [];
     renderTargetOptions();
     renderThemeLaws();
-    setStatus("점검결과 저장완료!");
+    showAlert("점검결과 저장완료!");
     window.setTimeout(() => {
       activateView("list");
       renderList();
@@ -880,7 +846,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#inspectedAt").value = todayLocalDateTime();
   bindEvents();
   try {
-    await initSupabase();
+    await initPhotoStorage();
     await loadData();
   } catch (error) {
     setStatus(error.message);
@@ -894,8 +860,24 @@ function normalizeActionType(actionType) {
 }
 
 function updateResultMode() {
-  $("#result-sample").value = "직접작성";
-  $("#actionType").disabled = false;
-  $("#new-result-content").disabled = false;
-  $("#new-result-content").placeholder = "직접 작성할 점검결과를 입력하세요.";
+  const sample = selectedResultSample();
+  const isDirect = !sample;
+  if (sample) $("#actionType").value = normalizeActionType(sample.actionType);
+  $("#actionType").disabled = !isDirect;
+  $("#new-result-content").disabled = !isDirect;
+  $("#new-result-content").placeholder = isDirect
+    ? "직접 작성할 점검결과를 입력하거나, 아래 버튼으로 데이터에 등록하세요."
+    : "등록된 점검결과를 선택 중입니다.";
 }
+
+
+
+
+
+
+
+
+
+
+
+

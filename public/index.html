@@ -110,8 +110,8 @@
             <label>
               <span>조치 구분</span>
               <select id="actionType" name="actionType">
-                <option>즉시조치완료</option>
                 <option>조치필요</option>
+                <option>즉시조치완료</option>
               </select>
             </label>
           </div>
@@ -151,13 +151,17 @@
           </label>
           <button type="button" id="download-selected-doc">선택 한글파일 다운로드</button>
           <button type="button" id="download-selected-excel">선택 엑셀파일 다운로드</button>
+          <button type="button" id="delete-selected" class="danger-button">선택 삭제</button>
           <span id="selected-count" role="status">선택 0건</span>
         </div>
         <div id="inspection-list" class="inspection-list"></div>
-        <section class="trash-panel rounded-2xl border border-red-100 bg-white/95 p-4 shadow-sm" aria-labelledby="trash-title">
+        <div class="trash-toggle-row">
+          <button type="button" id="toggle-trash" class="trash-toggle" aria-expanded="false" aria-controls="trash-panel">휴지통 보기 (0건)</button>
+          <span class="trash-notice">휴지통 항목은 30일 후 자동 완전 삭제됩니다.</span>
+        </div>
+        <section id="trash-panel" class="trash-panel rounded-2xl border border-red-100 bg-white/95 p-4 shadow-sm" aria-labelledby="trash-title" hidden>
           <div class="section-heading">
             <h3 id="trash-title">휴지통</h3>
-            <span>삭제한 점검결과와 삭제자를 확인합니다.</span>
           </div>
           <div id="trash-list" class="trash-list"></div>
         </section>
@@ -190,10 +194,6 @@
       <span>수도권서부본부</span>
     </footer>
 
-    <script src="/app.js?v=20260621-detail-storage"></script>
+    <script src="/app.js?v=20260621-trash-toggle"></script>
   </body>
 </html>
-
-
-
-

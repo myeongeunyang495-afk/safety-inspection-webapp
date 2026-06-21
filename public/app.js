@@ -43,7 +43,7 @@ async function api(path, options = {}) {
     ...options
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || "?遺욧퍕 筌ｌ꼶?????쎈솭??됰뮸??덈뼄.");
+  if (!response.ok) throw new Error(data.message || "\uC694\uCCAD\uC744 \uCC98\uB9AC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
   return data;
 }
 
@@ -54,7 +54,7 @@ async function initPhotoStorage() {
     state.storageClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
     state.storageEnabled = true;
   } catch (error) {
-    setStatus(`??彛????關???怨뚭퍙 ??쎈솭: ${error.message}`);
+    setStatus(`\uC0AC\uC9C4 \uC5C5\uB85C\uB4DC \uC2E4\uD328: ${error.message}`);
   }
 }
 
@@ -125,8 +125,8 @@ function renderFormOptions() {
   ])];
   fillSelect($("#theme"), state.themes);
   fillSelect($("#detailTheme"), state.detailThemes);
-  fillSelect($("#filter-theme"), ["?袁⑷퍥", ...themeFilterItems]);
-  fillSelect($("#filter-detail-theme"), ["?袁⑷퍥 ?紐????춳", ...detailFilterItems]);
+  fillSelect($("#filter-theme"), ["\uC804\uCCB4", ...themeFilterItems]);
+  fillSelect($("#filter-detail-theme"), ["\uC804\uCCB4 \uC138\uBD80\uD14C\uB9C8", ...detailFilterItems]);
   if (state.themes.includes(currentTheme)) $("#theme").value = currentTheme;
   if (state.detailThemes.includes(currentDetailTheme)) $("#detailTheme").value = currentDetailTheme;
   if (themeFilterItems.includes(themeFilter)) $("#filter-theme").value = themeFilter;
@@ -135,7 +135,7 @@ function renderFormOptions() {
 
   const sampleSelect = $("#result-sample");
   const selectedSample = sampleSelect.value;
-  sampleSelect.innerHTML = '<option value="">筌욊낯??臾믨쉐</option>';
+  sampleSelect.innerHTML = '<option value="">\uC9C1\uC811\uC791\uC131</option>';
   for (const sample of state.resultSamples.filter((item) => state.visibleResultSampleIds.has(item.id))) {
     const option = document.createElement("option");
     option.value = sample.id;
@@ -152,7 +152,7 @@ function renderFormOptions() {
 
 function renderTargetOptions(previousValue = "") {
   const owner = $("#targetOwner").value;
-  const items = owner === "??랁닋??녾퍥(?⑤벊沅??녾퍥 ??釉?" ? state.contractors : state.targets;
+  const items = owner === "\uC218\uAE09\uC5C5\uCCB4(\uACF5\uC0AC\uC5C5\uCCB4 \uD3EC\uD568)" ? state.contractors : state.targets;
   fillSelect($("#targetCategory"), items);
   if (items.includes(previousValue)) $("#targetCategory").value = previousValue;
 }
@@ -163,7 +163,7 @@ function renderInspectors() {
     <label class="check-item">
       <input type="checkbox" name="inspectors" value="${escapeHtml(name)}" ${selected.has(name) ? "checked" : ""}>
       <span>${escapeHtml(name)}</span>
-      <button class="delete-inspector" type="button" data-action="delete-inspector" data-name="${escapeHtml(name)}">????/button>
+      <button class="delete-inspector" type="button" data-action="delete-inspector" data-name="${escapeHtml(name)}">\uC0AD\uC81C</button>
     </label>
   `).join("");
 }
@@ -184,7 +184,7 @@ function renderThemeLaws() {
   $("#law-theme-name").textContent = [theme, detailTheme].filter(Boolean).join(" / ");
   $("#theme-laws").innerHTML = laws.length
     ? laws.map((law) => `<li>${escapeHtml(law)}</li>`).join("")
-    : "<li>?紐? ?癒????춳???醫뤾문??롢늺 ???甕곕베議?類ｋ궖??녠숲 Open API嚥??온??甕곕베議??鈺곌퀬???몃빍??</li>";
+    : "<li>\uC138\uBD80 \uC810\uAC80\uD14C\uB9C8\uB97C \uC120\uD0DD\uD558\uBA74 \uAD6D\uAC00\uBC95\uB839\uC815\uBCF4\uC13C\uD130 Open API\uB85C \uAD00\uB828 \uBC95\uB839\uC744 \uC870\uD68C\uD569\uB2C8\uB2E4.</li>";
 }
 
 async function loadLaws() {
@@ -530,8 +530,8 @@ async function inlinePhotoForDocument(item) {
 function inspectionDocHtml(item) {
   const laws = item.laws || [];
   const photoHtml = item.beforePhoto
-    ? `<img src="${item.beforePhoto}" width="50" height="50" alt="鈺곌퀣??????彛? style="width:50px;height:50px;max-width:50px;max-height:50px;mso-width-alt:50;mso-height-alt:50;border:1px solid #999;">`
-    : "??彛???곸벉";
+    ? `<img src="${item.beforePhoto}" width="50" height="50" alt="\uC870\uCE58 \uC804 \uC0AC\uC9C4" style="width:50px;height:50px;max-width:50px;max-height:50px;mso-width-alt:50;mso-height-alt:50;border:1px solid #999;">`
+    : "\uC0AC\uC9C4 \uC5C6\uC74C";
   return `
     <!doctype html>
     <html lang="ko">
@@ -549,17 +549,17 @@ function inspectionDocHtml(item) {
         </style>
       </head>
       <body>
-        <h1>??됱읈癰귣떯援??癒?野껉퀗??/h1>
+        <h1>\uC548\uC804\uBCF4\uAC74 \uC810\uAC80\uACB0\uACFC</h1>
         <table>
-          <tr><th>?癒????춳</th><td>${escapeHtml(item.theme)}</td><th>?紐? ?癒????춳</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
-          <tr><th>?癒???깅뻻</th><td>${formatDate(item.inspectedAt)}</td><th>鈺곌퀣???닌됲뀋</th><td>${escapeHtml(item.actionType)}</td></tr>
-          <tr><th>?癒?????/th><td colspan="3">${escapeHtml(displayTarget(item))}</td></tr>
-          <tr><th>?癒???/th><td colspan="3">${escapeHtml(displayInspectors(item))}</td></tr>
-          <tr><th>?癒?野껉퀗??/th><td class="result-cell" colspan="3">${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
-          <tr><th>?온??甕곕베議?/th><td colspan="3">${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
+          <tr><th>\uC810\uAC80\uD14C\uB9C8</th><td>${escapeHtml(item.theme)}</td><th>\uC138\uBD80 \uC810\uAC80\uD14C\uB9C8</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
+          <tr><th>\uC810\uAC80\uC77C\uC2DC</th><td>${formatDate(item.inspectedAt)}</td><th>\uC870\uCE58 \uAD6C\uBD84</th><td>${escapeHtml(item.actionType)}</td></tr>
+          <tr><th>\uC810\uAC80\uB300\uC0C1</th><td colspan="3">${escapeHtml(displayTarget(item))}</td></tr>
+          <tr><th>\uC810\uAC80\uC790</th><td colspan="3">${escapeHtml(displayInspectors(item))}</td></tr>
+          <tr><th>\uC810\uAC80\uACB0\uACFC</th><td class="result-cell" colspan="3">${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
+          <tr><th>\uAD00\uB828 \uBC95\uB839</th><td colspan="3">${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
         </table>
         <table>
-          <tr><th>鈺곌퀣??????彛?/th></tr>
+          <tr><th>\uC870\uCE58 \uC804 \uC0AC\uC9C4</th></tr>
           <tr><td class="photo-cell">${photoHtml}</td></tr>
         </table>
       </body>
@@ -595,8 +595,8 @@ function inspectionExcelHtml(item) {
       <body>
         <table border="1">
           <tr>
-            <th>?癒????춳</th><th>?癒???깅뻻</th><th>?癒?????/th><th>?癒???/th>
-            <th>?紐? ?癒????춳</th><th>鈺곌퀣???닌됲뀋</th><th>?癒?野껉퀗??/th><th>?온??甕곕베議?/th>
+            <th>\uC810\uAC80\uD14C\uB9C8</th><th>\uC810\uAC80\uC77C\uC2DC</th><th>\uC810\uAC80\uB300\uC0C1</th><th>\uC810\uAC80\uC790</th>
+            <th>\uC138\uBD80 \uC810\uAC80\uD14C\uB9C8</th><th>\uC870\uCE58 \uAD6C\uBD84</th><th>\uC810\uAC80\uACB0\uACFC</th><th>\uAD00\uB828 \uBC95\uB839</th>
           </tr>
           <tr>
             <td>${escapeHtml(item.theme)}</td>
@@ -633,8 +633,8 @@ async function inspectionFile(item, type) {
 
 function downloadInspection(item, type) {
   return inspectionFile(item, type).then((file) => {
-  downloadBlob(file.filename, file.mimeType, file.content);
-    setStatus(`${file.filename} ??쇱뒲嚥≪뮆諭띄몴???뽰삂??됰뮸??덈뼄.`);
+    downloadBlob(file.filename, file.mimeType, file.content);
+    setStatus(`${file.filename} \uB2E4\uC6B4\uB85C\uB4DC\uB97C \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.`);
   });
 }
 
@@ -644,7 +644,7 @@ function delay(ms) {
 
 async function downloadSelectedInspections(type) {
   const items = filteredInspectionItems().filter((item) => state.selectedInspectionIds.has(item.id));
-  if (!items.length) return setStatus("??쇱뒲嚥≪뮆諭???癒?野껉퀗?든몴??醫뤾문??뤾쉭??");
+  if (!items.length) return setStatus("\uB2E4\uC6B4\uB85C\uB4DC\uD560 \uC810\uAC80\uACB0\uACFC\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
   const buttons = [$("#download-selected-doc"), $("#download-selected-excel")];
   buttons.forEach((button) => {
     button.disabled = true;
@@ -654,7 +654,7 @@ async function downloadSelectedInspections(type) {
       await downloadInspection(item, type);
       await delay(250);
     }
-    setStatus(`?醫뤾문???癒?野껉퀗??${items.length}椰???쇱뒲嚥≪뮆諭띄몴???뽰삂??됰뮸??덈뼄.`);
+    setStatus(`\uC120\uD0DD\uD55C \uC810\uAC80\uACB0\uACFC ${items.length}\uAC74 \uB2E4\uC6B4\uB85C\uB4DC\uB97C \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.`);
   } finally {
     renderBulkDownloadState();
   }
@@ -722,14 +722,14 @@ function bindEvents() {
   $("#filter-detail-theme").addEventListener("change", renderList);
   $("#save-result-sample").addEventListener("click", async () => {
     const content = $("#new-result-content").value.trim();
-    if (!content) return setStatus("?源낆쨯???癒?野껉퀗????곸뒠????낆젾??뤾쉭??");
+    if (!content) return setStatus("\uB4F1\uB85D\uD560 \uC810\uAC80\uACB0\uACFC \uB0B4\uC6A9\uC744 \uC785\uB825\uD558\uC138\uC694.");
     const duplicate = state.resultSamples.find((item) => item.content === content);
     if (duplicate) {
       state.visibleResultSampleIds.add(duplicate.id);
       renderFormOptions();
       $("#result-sample").value = duplicate.id;
       updateResultMode();
-      return setStatus("??? ?源낆쨯???癒?野껉퀗?든몴??醫뤾문??됰뮸??덈뼄.");
+      return setStatus("\uC774\uBBF8 \uB4F1\uB85D\uB41C \uC810\uAC80\uACB0\uACFC\uB97C \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.");
     }
     const data = await api("/api/result-samples", {
       method: "POST",
@@ -744,7 +744,7 @@ function bindEvents() {
     renderFormOptions();
     $("#result-sample").value = data.sample.id;
     updateResultMode();
-    setStatus("?癒?野껉퀗???怨쀬뵠?怨쀫퓠 ?源낆쨯??뤿???щ빍??");
+    setStatus("\uC810\uAC80\uACB0\uACFC \uB370\uC774\uD130\uC5D0 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
   });
   $("#select-all-inspections").addEventListener("change", (event) => {
     const items = filteredInspectionItems();
@@ -802,7 +802,7 @@ function bindEvents() {
   $("#beforePhoto").addEventListener("change", (event) => readPhoto(event.target, "beforePhoto", $("#before-preview")));
   $("#add-detail-theme").addEventListener("click", async () => {
     const detailTheme = $("#new-detail-theme").value.trim();
-    if (!detailTheme) return setStatus("??덉쨮???紐? ?癒????춳????낆젾??뤾쉭??");
+    if (!detailTheme) return setStatus("\uC0C8\uB85C\uC6B4 \uC138\uBD80 \uC810\uAC80\uD14C\uB9C8\uB97C \uC785\uB825\uD558\uC138\uC694.");
     const data = await api("/api/detail-themes", {
       method: "POST",
       body: JSON.stringify({ detailTheme })
@@ -813,26 +813,26 @@ function bindEvents() {
     $("#new-detail-theme").value = "";
     $("#form-top").scrollIntoView({ behavior: "smooth", block: "start" });
     loadLaws();
-    setStatus("?紐? ?癒????춳揶쎛 ?源낆쨯??뤿???щ빍??");
+    setStatus("\uC138\uBD80 \uC810\uAC80\uD14C\uB9C8\uAC00 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
   });
 
   $("#add-contractor").addEventListener("click", async () => {
     const contractor = $("#new-contractor").value.trim();
-    if (!contractor) return setStatus("?곕떽?????랁닋??녾퍥筌뤿굞????낆젾??뤾쉭??");
+    if (!contractor) return setStatus("\uCD94\uAC00\uD560 \uC218\uAE09\uC5C5\uCCB4\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694.");
     const data = await api("/api/contractors", {
       method: "POST",
       body: JSON.stringify({ contractor })
     });
     state.contractors = data.contractors;
     $("#new-contractor").value = "";
-    $("#targetOwner").value = "??랁닋??녾퍥(?⑤벊沅??녾퍥 ??釉?";
+    $("#targetOwner").value = "\uC218\uAE09\uC5C5\uCCB4(\uACF5\uC0AC\uC5C5\uCCB4 \uD3EC\uD568)";
     renderTargetOptions(contractor);
-    setStatus("??랁닋??녾퍥揶쎛 ?源낆쨯??뤿???щ빍??");
+    setStatus("\uC218\uAE09\uC5C5\uCCB4\uAC00 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
   });
 
   $("#add-inspector").addEventListener("click", async () => {
     const inspector = $("#new-inspector").value.trim();
-    if (!inspector) return setStatus("?곕떽????紐꾩뜚????낆젾??뤾쉭??");
+    if (!inspector) return setStatus("\uCD94\uAC00\uD560 \uC778\uC6D0\uC744 \uC785\uB825\uD558\uC138\uC694.");
     const data = await api("/api/inspectors", {
       method: "POST",
       body: JSON.stringify({ inspector })
@@ -842,7 +842,7 @@ function bindEvents() {
     renderInspectors();
     const added = $(`input[name="inspectors"][value="${CSS.escape(inspector)}"]`);
     if (added) added.checked = true;
-    setStatus("?癒??癒? ?源낆쨯??뤿???щ빍??");
+    setStatus("\uC810\uAC80\uC790\uAC00 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
   });
 
   $("#inspector-options").addEventListener("click", async (event) => {
@@ -856,16 +856,16 @@ function bindEvents() {
     });
     state.inspectors = data.inspectors;
     renderInspectors();
-    setStatus("?癒??癒? ?????뤿???щ빍??");
+    setStatus("\uC810\uAC80\uC790\uAC00 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
   });
 
   $("#inspection-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const inspectors = getSelectedInspectors();
-    if (!inspectors.length) return showAlert("?癒??癒? ??筌???곴맒 ?醫뤾문??뤾쉭??");
+    if (!inspectors.length) return showAlert("\uC810\uAC80\uC790\uB97C \uD55C \uBA85 \uC774\uC0C1 \uC120\uD0DD\uD558\uC138\uC694.");
     const sample = selectedResultSample();
     const directText = $("#new-result-content").value.trim();
-    if (!sample && !directText) return showAlert("?癒?野껉퀗?든몴??臾믨쉐??띻탢???源낆쨯???癒?野껉퀗?든몴??醫뤾문??뤾쉭??");
+    if (!sample && !directText) return showAlert("\uC810\uAC80\uACB0\uACFC\uB97C \uC9C1\uC811 \uC791\uC131\uD558\uAC70\uB098 \uB4F1\uB85D\uB41C \uC810\uAC80\uACB0\uACFC\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
     const payload = {
       theme: $("#theme").value,
       detailTheme: $("#detailTheme").value,
@@ -901,7 +901,7 @@ function bindEvents() {
     state.currentLaws = [];
     renderTargetOptions();
     renderThemeLaws();
-    showAlert("?癒?野껉퀗?????關?욜뙴?");
+    showAlert("\uC810\uAC80\uACB0\uACFC \uC800\uC7A5\uC644\uB8CC!");
     window.setTimeout(() => {
       activateView("list");
       renderList();

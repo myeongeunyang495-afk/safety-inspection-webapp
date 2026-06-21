@@ -6,8 +6,12 @@ const state = {
   contractors: [],
   inspectors: [],
   resultSamples: [],
+  visibleResultSampleIds: new Set(),
   inspections: [],
   stats: { total: 0, byTheme: [], byAction: {}, targetByMonth: {} },
+  storageClient: null,
+  storageEnabled: false,
+  selectedInspectionIds: new Set(),
   photos: {
     beforePhoto: ""
   },
@@ -41,6 +45,52 @@ async function api(path, options = {}) {
   return data;
 }
 
+async function initPhotoStorage() {
+  try {
+    const config = await api("/api/config");
+    if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase) return;
+    state.storageClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+    state.storageEnabled = true;
+  } catch (error) {
+    setStatus(`사진 저장소 연결 실패: ${error.message}`);
+  }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const match = String(dataUrl || "").match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  const bytes = Uint8Array.from(atob(match[2]), (char) => char.charCodeAt(0));
+  return new Blob([bytes], { type: match[1] });
+}
+
+function storagePublicUrl(path) {
+  if (!path || !state.storageClient) return "";
+  const { data } = state.storageClient.storage.from("inspection-photos").getPublicUrl(path);
+  return data?.publicUrl || "";
+}
+
+async function uploadPhotoToStorage(dataUrl) {
+  if (!dataUrl || !state.storageEnabled || !state.storageClient) return { beforePhoto: dataUrl };
+  const blob = dataUrlToBlob(dataUrl);
+  if (!blob) return { beforePhoto: dataUrl };
+  const path = `public/${Date.now()}-${crypto.randomUUID()}.jpg`;
+  const { error } = await state.storageClient.storage
+    .from("inspection-photos")
+    .upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: false });
+  if (error) {
+    setStatus(`Supabase 사진 저장 실패: ${error.message}`);
+    return { beforePhoto: dataUrl };
+  }
+  return { beforePhoto: storagePublicUrl(path), beforePhotoPath: path };
+}
+
+function hydrateStoragePhotos() {
+  if (!state.storageClient) return;
+  state.inspections = state.inspections.map((item) => {
+    if (!item.beforePhotoPath) return item;
+    return { ...item, beforePhoto: storagePublicUrl(item.beforePhotoPath) || item.beforePhoto };
+  });
+}
 function fillSelect(select, items, placeholder) {
   select.innerHTML = "";
   if (placeholder) {
@@ -61,23 +111,38 @@ function renderFormOptions() {
   const currentTheme = $("#theme").value;
   const currentDetailTheme = $("#detailTheme").value;
   const currentTarget = $("#targetCategory").value;
+  const themeFilter = $("#filter-theme").value;
+  const detailFilter = $("#filter-detail-theme").value;
+  const themeFilterItems = [...new Set([
+    ...state.themes,
+    ...state.inspections.map((item) => item.theme).filter(Boolean)
+  ])];
+  const detailFilterItems = [...new Set([
+    ...state.detailThemes,
+    ...state.inspections.map((item) => item.detailTheme).filter(Boolean)
+  ])];
   fillSelect($("#theme"), state.themes);
   fillSelect($("#detailTheme"), state.detailThemes);
-  fillSelect($("#filter-theme"), ["전체", ...state.themes]);
+  fillSelect($("#filter-theme"), ["전체", ...themeFilterItems]);
+  fillSelect($("#filter-detail-theme"), ["전체 세부테마", ...detailFilterItems]);
   if (state.themes.includes(currentTheme)) $("#theme").value = currentTheme;
   if (state.detailThemes.includes(currentDetailTheme)) $("#detailTheme").value = currentDetailTheme;
+  if (themeFilterItems.includes(themeFilter)) $("#filter-theme").value = themeFilter;
+  if (detailFilterItems.includes(detailFilter)) $("#filter-detail-theme").value = detailFilter;
   renderTargetOptions(currentTarget);
 
   const sampleSelect = $("#result-sample");
   const selectedSample = sampleSelect.value;
   sampleSelect.innerHTML = '<option value="">직접작성</option>';
-  for (const sample of state.resultSamples) {
+  for (const sample of state.resultSamples.filter((item) => state.visibleResultSampleIds.has(item.id))) {
     const option = document.createElement("option");
     option.value = sample.id;
     option.textContent = sample.title;
     sampleSelect.append(option);
   }
-  sampleSelect.value = selectedSample;
+  if ([...sampleSelect.options].some((option) => option.value === selectedSample)) {
+    sampleSelect.value = selectedSample;
+  }
   renderInspectors();
   renderThemeLaws();
   updateResultMode();
@@ -105,6 +170,11 @@ function getSelectedInspectors() {
   return $$('input[name="inspectors"]:checked').map((item) => item.value);
 }
 
+function selectedResultSample() {
+  const value = $("#result-sample").value;
+  return state.resultSamples.find((item) => item.id === value);
+}
+
 function renderThemeLaws() {
   const theme = $("#theme").value;
   const detailTheme = $("#detailTheme").value;
@@ -129,18 +199,26 @@ async function loadLaws() {
 
 function renderList() {
   const list = $("#inspection-list");
-  const filter = $("#filter-theme").value || "전체";
-  const items = state.inspections.filter((item) => filter === "전체" || item.theme === filter);
+  const items = filteredInspectionItems();
+  const visibleIds = new Set(items.map((item) => item.id));
+  for (const id of [...state.selectedInspectionIds]) {
+    if (!state.inspections.some((item) => item.id === id)) state.selectedInspectionIds.delete(id);
+  }
 
   if (!items.length) {
     list.innerHTML = '<div class="empty">저장된 점검결과가 없습니다.</div>';
+    renderBulkDownloadState(items);
     return;
   }
 
   list.innerHTML = items.map((item) => `
     <article class="inspection-card" data-id="${escapeHtml(item.id)}">
+      <label class="inspection-select">
+        <input type="checkbox" data-action="select-inspection" data-id="${escapeHtml(item.id)}" ${state.selectedInspectionIds.has(item.id) ? "checked" : ""}>
+        <span>다운로드 선택</span>
+      </label>
       <button class="inspection-summary" type="button" data-action="toggle-detail" data-id="${escapeHtml(item.id)}">
-        <span><span class="summary-label">테마</span><strong>${escapeHtml(item.theme)}</strong></span>
+        <span><span class="summary-label">테마 / 세부테마</span><strong>${escapeHtml(item.theme)} / ${escapeHtml(item.detailTheme || "-")}</strong></span>
         <span><span class="summary-label">일시</span>${formatDate(item.inspectedAt)}</span>
         <span><span class="summary-label">대상</span>${escapeHtml(displayTarget(item))}</span>
         <span><span class="summary-label">점검자</span>${escapeHtml(displayInspectors(item))}</span>
@@ -163,6 +241,34 @@ function renderList() {
       </div>
     </article>
   `).join("");
+  for (const id of [...state.selectedInspectionIds]) {
+    if (!visibleIds.has(id)) state.selectedInspectionIds.delete(id);
+  }
+  renderBulkDownloadState(items);
+}
+
+function filteredInspectionItems() {
+  const filter = $("#filter-theme").value || "전체";
+  const detailFilter = $("#filter-detail-theme").value || "전체 세부테마";
+  return state.inspections.filter((item) => {
+    const themeMatches = filter === "전체" || item.theme === filter;
+    const detailMatches = detailFilter === "전체 세부테마" || item.detailTheme === detailFilter;
+    return themeMatches && detailMatches;
+  });
+}
+
+function renderBulkDownloadState(items = filteredInspectionItems()) {
+  const visibleIds = items.map((item) => item.id);
+  const selectedVisibleCount = visibleIds.filter((id) => state.selectedInspectionIds.has(id)).length;
+  const selectAll = $("#select-all-inspections");
+  if (selectAll) {
+    selectAll.checked = Boolean(visibleIds.length && selectedVisibleCount === visibleIds.length);
+    selectAll.indeterminate = Boolean(selectedVisibleCount && selectedVisibleCount < visibleIds.length);
+    selectAll.disabled = !visibleIds.length;
+  }
+  $("#download-selected-doc").disabled = !selectedVisibleCount;
+  $("#download-selected-excel").disabled = !selectedVisibleCount;
+  $("#selected-count").textContent = `선택 ${selectedVisibleCount}건`;
 }
 
 function displayTarget(item) {
@@ -251,6 +357,33 @@ function renderTargetMonthStats() {
   `;
 }
 
+function buildStatsFromInspections(inspections) {
+  const byTheme = {};
+  const byAction = {};
+  const targetByMonth = {};
+
+  for (const item of inspections) {
+    const detailTheme = item.detailTheme || "세부테마 미지정";
+    byTheme[detailTheme] ||= { theme: detailTheme, total: 0, actions: {} };
+    byTheme[detailTheme].total += 1;
+    byTheme[detailTheme].actions[item.actionType] = (byTheme[detailTheme].actions[item.actionType] || 0) + 1;
+    byAction[item.actionType] = (byAction[item.actionType] || 0) + 1;
+
+    const date = new Date(item.inspectedAt);
+    const month = Number.isNaN(date.getTime()) ? "날짜 미상" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const target = displayTarget(item) || "대상 미상";
+    targetByMonth[target] ||= {};
+    targetByMonth[target][month] = (targetByMonth[target][month] || 0) + 1;
+  }
+
+  return {
+    total: inspections.length,
+    byTheme: Object.values(byTheme).sort((a, b) => b.total - a.total || a.theme.localeCompare(b.theme, "ko")),
+    byAction,
+    targetByMonth
+  };
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -272,6 +405,11 @@ function setStatus(message) {
   }, 3000);
 }
 
+function showAlert(message) {
+  window.alert(message);
+  setStatus(message);
+}
+
 function readPhoto(input, key, preview) {
   const file = input.files[0];
   if (!file) return;
@@ -280,11 +418,19 @@ function readPhoto(input, key, preview) {
     const compressed = await compressImage(reader.result);
     state.photos[key] = compressed;
     preview.src = compressed;
+    const originalKb = Math.max(1, Math.round(file.size / 1024));
+    const compressedKb = Math.max(1, Math.round(estimatedDataUrlBytes(compressed) / 1024));
+    setStatus(`사진 압축 완료: ${originalKb}KB -> ${compressedKb}KB`);
   };
   reader.readAsDataURL(file);
 }
 
-function compressImage(dataUrl, maxSize = 900, quality = 0.62) {
+function estimatedDataUrlBytes(dataUrl) {
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  return Math.floor((base64.length * 3) / 4);
+}
+
+function compressImage(dataUrl, maxSize = 720, quality = 0.58) {
   return new Promise((resolve) => {
     const image = new Image();
     image.onload = () => {
@@ -333,38 +479,61 @@ function encodeBase64Utf8(text) {
   return btoa(binary).replace(/(.{76})/g, "$1\r\n");
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function inlinePhotoForDocument(item) {
+  if (!item.beforePhoto || item.beforePhoto.startsWith("data:")) return item;
+  try {
+    const response = await fetch(item.beforePhoto);
+    if (!response.ok) return item;
+    const dataUrl = await blobToDataUrl(await response.blob());
+    return { ...item, beforePhoto: dataUrl };
+  } catch {
+    return item;
+  }
+}
+
 function inspectionDocHtml(item) {
   const laws = item.laws || [];
+  const photoHtml = item.beforePhoto
+    ? `<img src="${item.beforePhoto}" width="50" height="50" alt="조치 전 사진" style="width:50px;height:50px;max-width:50px;max-height:50px;mso-width-alt:50;mso-height-alt:50;border:1px solid #999;">`
+    : "사진 없음";
   return `
     <!doctype html>
     <html lang="ko">
       <head>
         <meta charset="utf-8">
         <style>
-          body { font-family: Malgun Gothic, Arial, sans-serif; line-height: 1.6; }
-          h1 { font-size: 22px; }
-          table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-          th, td { border: 1px solid #999; padding: 8px; text-align: left; vertical-align: top; }
-          th { width: 140px; background: #f0f0f0; }
-          img { max-width: 100%; width: 420px; height: auto; }
-          .photo-cell { text-align: center; }
+          body { font-family: Malgun Gothic, Arial, sans-serif; line-height: 1.55; color: #111; }
+          h1 { margin: 0 0 14px; font-size: 20px; text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0; table-layout: fixed; }
+          th, td { border: 1px solid #777; padding: 7px; text-align: left; vertical-align: top; font-size: 10.5pt; word-break: break-all; }
+          th { width: 120px; background: #eef4fb; font-weight: 700; }
+          .result-cell { min-height: 70px; }
+          .photo-cell { height: 62px; text-align: center; vertical-align: middle; }
+          .photo-cell img { width: 50px !important; height: 50px !important; max-width: 50px !important; max-height: 50px !important; }
         </style>
       </head>
       <body>
-        <h1>점검결과</h1>
+        <h1>안전보건 점검결과</h1>
         <table>
-          <tr><th>점검테마</th><td>${escapeHtml(item.theme)}</td></tr>
-          <tr><th>점검일시</th><td>${formatDate(item.inspectedAt)}</td></tr>
-          <tr><th>점검대상</th><td>${escapeHtml(displayTarget(item))}</td></tr>
-          <tr><th>점검자</th><td>${escapeHtml(displayInspectors(item))}</td></tr>
-          <tr><th>세부 점검테마</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
-          <tr><th>조치 구분</th><td>${escapeHtml(item.actionType)}</td></tr>
-          <tr><th>점검결과</th><td>${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
-          <tr><th>관련 법령</th><td>${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
+          <tr><th>점검테마</th><td>${escapeHtml(item.theme)}</td><th>세부 점검테마</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
+          <tr><th>점검일시</th><td>${formatDate(item.inspectedAt)}</td><th>조치 구분</th><td>${escapeHtml(item.actionType)}</td></tr>
+          <tr><th>점검대상</th><td colspan="3">${escapeHtml(displayTarget(item))}</td></tr>
+          <tr><th>점검자</th><td colspan="3">${escapeHtml(displayInspectors(item))}</td></tr>
+          <tr><th>점검결과</th><td class="result-cell" colspan="3">${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
+          <tr><th>관련 법령</th><td colspan="3">${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
         </table>
         <table>
           <tr><th>조치 전 사진</th></tr>
-          <tr><td class="photo-cell">${item.beforePhoto ? `<img src="${item.beforePhoto}" alt="조치 전 사진">` : "사진 없음"}</td></tr>
+          <tr><td class="photo-cell">${photoHtml}</td></tr>
         </table>
       </body>
     </html>
@@ -418,18 +587,61 @@ function inspectionExcelHtml(item) {
   `;
 }
 
-function downloadInspection(item, type) {
+async function inspectionFile(item, type) {
   const base = `${fileSafe(item.theme)}_${fileSafe(displayTarget(item))}`;
   if (type === "doc") {
-    downloadBlob(`${base}.doc`, "application/msword", inspectionDocMhtml(item));
-    return;
+    const docItem = await inlinePhotoForDocument(item);
+    return {
+      filename: `${base}.doc`,
+      mimeType: "application/msword",
+      content: inspectionDocMhtml(docItem)
+    };
   }
-  downloadBlob(`${base}.xls`, "application/vnd.ms-excel;charset=utf-8", "\ufeff" + inspectionExcelHtml(item));
+  return {
+    filename: `${base}.xls`,
+    mimeType: "application/vnd.ms-excel",
+    content: "\ufeff" + inspectionExcelHtml(item)
+  };
+}
+
+function downloadInspection(item, type) {
+  return inspectionFile(item, type).then((file) => {
+  downloadBlob(file.filename, file.mimeType, file.content);
+    setStatus(`${file.filename} 다운로드를 시작했습니다.`);
+  });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function downloadSelectedInspections(type) {
+  const items = filteredInspectionItems().filter((item) => state.selectedInspectionIds.has(item.id));
+  if (!items.length) return setStatus("다운로드할 점검결과를 선택하세요.");
+  const buttons = [$("#download-selected-doc"), $("#download-selected-excel")];
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+  try {
+    for (const item of items) {
+      await downloadInspection(item, type);
+      await delay(250);
+    }
+    setStatus(`선택한 점검결과 ${items.length}건 다운로드를 시작했습니다.`);
+  } finally {
+    renderBulkDownloadState();
+  }
+}
+
+function activateView(viewId) {
+  $$(".tab").forEach((item) => item.classList.toggle("is-active", item.dataset.view === viewId));
+  $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewId));
 }
 
 async function loadData() {
   const data = await api("/api/bootstrap");
   Object.assign(state, data);
+  hydrateStoragePhotos();
   renderFormOptions();
   await loadLaws();
   renderList();
@@ -438,24 +650,57 @@ async function loadData() {
 
 function bindEvents() {
   $$(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      $$(".tab").forEach((item) => item.classList.toggle("is-active", item === tab));
-      $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === tab.dataset.view));
-    });
+    tab.addEventListener("click", () => activateView(tab.dataset.view));
   });
 
-  $("#result-sample").addEventListener("change", (event) => {
-    const sample = state.resultSamples.find((item) => item.id === event.target.value);
-    if (sample) $("#actionType").value = normalizeActionType(sample.actionType);
-    updateResultMode();
-  });
+  $("#result-sample").addEventListener("change", updateResultMode);
 
   $("#theme").addEventListener("change", loadLaws);
   $("#detailTheme").addEventListener("change", loadLaws);
   $("#targetOwner").addEventListener("change", () => renderTargetOptions());
   $("#filter-theme").addEventListener("change", renderList);
+  $("#filter-detail-theme").addEventListener("change", renderList);
+  $("#save-result-sample").addEventListener("click", async () => {
+    const content = $("#new-result-content").value.trim();
+    if (!content) return setStatus("등록할 점검결과 내용을 입력하세요.");
+    const duplicate = state.resultSamples.find((item) => item.content === content);
+    if (duplicate) {
+      state.visibleResultSampleIds.add(duplicate.id);
+      renderFormOptions();
+      $("#result-sample").value = duplicate.id;
+      updateResultMode();
+      return setStatus("이미 등록된 점검결과를 선택했습니다.");
+    }
+    const data = await api("/api/result-samples", {
+      method: "POST",
+      body: JSON.stringify({
+        title: content.length > 28 ? `${content.slice(0, 28)}...` : content,
+        content,
+        actionType: $("#actionType").value
+      })
+    });
+    state.resultSamples = data.resultSamples;
+    state.visibleResultSampleIds.add(data.sample.id);
+    renderFormOptions();
+    $("#result-sample").value = data.sample.id;
+    updateResultMode();
+    setStatus("점검결과 데이터에 등록되었습니다.");
+  });
+  $("#select-all-inspections").addEventListener("change", (event) => {
+    const items = filteredInspectionItems();
+    for (const item of items) {
+      if (event.target.checked) {
+        state.selectedInspectionIds.add(item.id);
+      } else {
+        state.selectedInspectionIds.delete(item.id);
+      }
+    }
+    renderList();
+  });
+  $("#download-selected-doc").addEventListener("click", () => downloadSelectedInspections("doc"));
+  $("#download-selected-excel").addEventListener("click", () => downloadSelectedInspections("excel"));
 
-  $("#inspection-list").addEventListener("click", (event) => {
+  $("#inspection-list").addEventListener("click", async (event) => {
     const button = event.target.closest("[data-action]");
     if (!button) return;
     const item = state.inspections.find((inspection) => inspection.id === button.dataset.id);
@@ -463,8 +708,27 @@ function bindEvents() {
     if (button.dataset.action === "toggle-detail") {
       button.closest(".inspection-card").classList.toggle("is-open");
     }
-    if (button.dataset.action === "download-doc") downloadInspection(item, "doc");
-    if (button.dataset.action === "download-excel") downloadInspection(item, "excel");
+    if (button.dataset.action === "download-doc" || button.dataset.action === "download-excel") {
+      try {
+        button.disabled = true;
+        const type = button.dataset.action === "download-doc" ? "doc" : "excel";
+        await downloadInspection(item, type);
+      } catch (error) {
+        setStatus(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
+  });
+  $("#inspection-list").addEventListener("change", (event) => {
+    const checkbox = event.target.closest('[data-action="select-inspection"]');
+    if (!checkbox) return;
+    if (checkbox.checked) {
+      state.selectedInspectionIds.add(checkbox.dataset.id);
+    } else {
+      state.selectedInspectionIds.delete(checkbox.dataset.id);
+    }
+    renderBulkDownloadState();
   });
 
   $("#beforePhoto").addEventListener("change", (event) => readPhoto(event.target, "beforePhoto", $("#before-preview")));
@@ -527,33 +791,13 @@ function bindEvents() {
     setStatus("점검자가 삭제되었습니다.");
   });
 
-  $("#save-sample").addEventListener("click", async () => {
-    const content = $("#new-result-content").value.trim();
-    if (!content) return setStatus("등록할 점검결과 내용을 입력하세요.");
-    const data = await api("/api/result-samples", {
-      method: "POST",
-      body: JSON.stringify({
-        title: content.slice(0, 24),
-        content,
-        actionType: $("#actionType").value
-      })
-    });
-    state.resultSamples = data.resultSamples;
-    renderFormOptions();
-    $("#result-sample").value = data.sample.id;
-    $("#new-result-content").value = "";
-    $("#form-top").scrollIntoView({ behavior: "smooth", block: "start" });
-    updateResultMode();
-    setStatus("점검결과 데이터가 등록되었습니다.");
-  });
-
   $("#inspection-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const inspectors = getSelectedInspectors();
-    if (!inspectors.length) return setStatus("점검자를 한 명 이상 선택하세요.");
-    const sample = state.resultSamples.find((item) => item.id === $("#result-sample").value);
+    if (!inspectors.length) return showAlert("점검자를 한 명 이상 선택하세요.");
+    const sample = selectedResultSample();
     const directText = $("#new-result-content").value.trim();
-    if (!sample && !directText) return setStatus("직접작성 점검결과 내용을 입력하세요.");
+    if (!sample && !directText) return showAlert("점검결과를 작성하거나 등록된 점검결과를 선택하세요.");
     const payload = {
       theme: $("#theme").value,
       detailTheme: $("#detailTheme").value,
@@ -565,9 +809,10 @@ function bindEvents() {
       inspectors,
       resultTitle: sample?.title || "",
       resultText: sample?.content || directText,
-      actionType: $("#actionType").value,
+      actionType: sample?.actionType || $("#actionType").value,
       beforePhoto: state.photos.beforePhoto
     };
+    if (payload.beforePhoto) Object.assign(payload, await uploadPhotoToStorage(payload.beforePhoto));
     const data = await api("/api/inspections", {
       method: "POST",
       body: JSON.stringify(payload)
@@ -576,17 +821,24 @@ function bindEvents() {
     state.stats = data.stats;
     state.themes = [...new Set([...state.themes, payload.theme])];
     renderFormOptions();
+    $("#filter-theme").value = "전체";
+    $("#filter-detail-theme").value = "전체 세부테마";
     renderList();
     renderStats();
     event.target.reset();
+    updateResultMode();
     $("#inspectedAt").value = todayLocalDateTime();
     $("#before-preview").removeAttribute("src");
     state.photos.beforePhoto = "";
     state.currentLaws = [];
     renderTargetOptions();
     renderThemeLaws();
-    alert("점검결과 작성완료!");
-    setStatus("점검결과가 저장되었습니다.");
+    showAlert("점검결과 저장완료!");
+    window.setTimeout(() => {
+      activateView("list");
+      renderList();
+      $("#list").scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 700);
   });
 }
 
@@ -594,6 +846,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#inspectedAt").value = todayLocalDateTime();
   bindEvents();
   try {
+    await initPhotoStorage();
     await loadData();
   } catch (error) {
     setStatus(error.message);
@@ -607,10 +860,24 @@ function normalizeActionType(actionType) {
 }
 
 function updateResultMode() {
-  const isDirect = $("#result-sample").value === "";
+  const sample = selectedResultSample();
+  const isDirect = !sample;
+  if (sample) $("#actionType").value = normalizeActionType(sample.actionType);
   $("#actionType").disabled = !isDirect;
   $("#new-result-content").disabled = !isDirect;
   $("#new-result-content").placeholder = isDirect
     ? "직접 작성할 점검결과를 입력하거나, 아래 버튼으로 데이터에 등록하세요."
-    : "미리 작성된 점검결과를 선택 중입니다.";
+    : "등록된 점검결과를 선택 중입니다.";
 }
+
+
+
+
+
+
+
+
+
+
+
+

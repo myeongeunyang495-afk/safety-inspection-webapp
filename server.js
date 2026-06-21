@@ -97,6 +97,7 @@ function readDb() {
       changed = true;
     }
   }
+  db.trash ||= [];
   for (const item of db.inspections || []) {
     if (["A 조치", "교육", "점검완료"].includes(item.actionType)) {
       item.actionType = "즉시조치완료";
@@ -488,6 +489,21 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 201, { sample, resultSamples: db.resultSamples });
   }
 
+
+  if (req.method === "POST" && pathname === "/api/inspections/delete") {
+    const body = await readBody(req);
+    const id = String(body.id || "").trim();
+    const deletedBy = String(body.deletedBy || "").trim();
+    if (!id) return sendJson(res, 400, { message: "삭제할 점검결과를 선택하세요." });
+    if (!deletedBy) return sendJson(res, 400, { message: "삭제자 이름을 입력하세요." });
+    const index = db.inspections.findIndex((item) => item.id === id);
+    if (index < 0) return sendJson(res, 404, { message: "점검결과를 찾을 수 없습니다." });
+    const [inspection] = db.inspections.splice(index, 1);
+    db.trash ||= [];
+    db.trash.unshift({ ...inspection, deletedBy, deletedAt: new Date().toISOString() });
+    writeDb(db);
+    return sendJson(res, 200, { inspections: db.inspections, trash: db.trash, stats: buildStats(db) });
+  }
   if (req.method === "POST" && pathname === "/api/inspections") {
     const body = await readBody(req);
     const inspection = normalizeInspection(body);
@@ -542,5 +558,6 @@ ensureDb();
 server.listen(PORT, () => {
   console.log(`Safety inspection app running at http://localhost:${PORT}`);
 });
+
 
 

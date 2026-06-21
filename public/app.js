@@ -43,7 +43,7 @@ async function api(path, options = {}) {
     ...options
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || "요청 처리에 실패했습니다.");
+  if (!response.ok) throw new Error(data.message || "?遺욧퍕 筌ｌ꼶?????쎈솭??됰뮸??덈뼄.");
   return data;
 }
 
@@ -54,7 +54,7 @@ async function initPhotoStorage() {
     state.storageClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
     state.storageEnabled = true;
   } catch (error) {
-    setStatus(`사진 저장소 연결 실패: ${error.message}`);
+    setStatus(`??彛????關???怨뚭퍙 ??쎈솭: ${error.message}`);
   }
 }
 
@@ -80,7 +80,7 @@ async function uploadPhotoToStorage(dataUrl) {
     .from("inspection-photos")
     .upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: false });
   if (error) {
-    setStatus(`Supabase 사진 저장 실패: ${error.message}`);
+    setStatus(`Supabase ??彛???????쎈솭: ${error.message}`);
     return { beforePhoto: dataUrl };
   }
   return { beforePhoto: storagePublicUrl(path), beforePhotoPath: path };
@@ -125,8 +125,8 @@ function renderFormOptions() {
   ])];
   fillSelect($("#theme"), state.themes);
   fillSelect($("#detailTheme"), state.detailThemes);
-  fillSelect($("#filter-theme"), ["전체", ...themeFilterItems]);
-  fillSelect($("#filter-detail-theme"), ["전체 세부테마", ...detailFilterItems]);
+  fillSelect($("#filter-theme"), ["?袁⑷퍥", ...themeFilterItems]);
+  fillSelect($("#filter-detail-theme"), ["?袁⑷퍥 ?紐????춳", ...detailFilterItems]);
   if (state.themes.includes(currentTheme)) $("#theme").value = currentTheme;
   if (state.detailThemes.includes(currentDetailTheme)) $("#detailTheme").value = currentDetailTheme;
   if (themeFilterItems.includes(themeFilter)) $("#filter-theme").value = themeFilter;
@@ -135,7 +135,7 @@ function renderFormOptions() {
 
   const sampleSelect = $("#result-sample");
   const selectedSample = sampleSelect.value;
-  sampleSelect.innerHTML = '<option value="">직접작성</option>';
+  sampleSelect.innerHTML = '<option value="">筌욊낯??臾믨쉐</option>';
   for (const sample of state.resultSamples.filter((item) => state.visibleResultSampleIds.has(item.id))) {
     const option = document.createElement("option");
     option.value = sample.id;
@@ -152,7 +152,7 @@ function renderFormOptions() {
 
 function renderTargetOptions(previousValue = "") {
   const owner = $("#targetOwner").value;
-  const items = owner === "수급업체(공사업체 포함)" ? state.contractors : state.targets;
+  const items = owner === "??랁닋??녾퍥(?⑤벊沅??녾퍥 ??釉?" ? state.contractors : state.targets;
   fillSelect($("#targetCategory"), items);
   if (items.includes(previousValue)) $("#targetCategory").value = previousValue;
 }
@@ -163,7 +163,7 @@ function renderInspectors() {
     <label class="check-item">
       <input type="checkbox" name="inspectors" value="${escapeHtml(name)}" ${selected.has(name) ? "checked" : ""}>
       <span>${escapeHtml(name)}</span>
-      <button class="delete-inspector" type="button" data-action="delete-inspector" data-name="${escapeHtml(name)}">삭제</button>
+      <button class="delete-inspector" type="button" data-action="delete-inspector" data-name="${escapeHtml(name)}">????/button>
     </label>
   `).join("");
 }
@@ -184,7 +184,7 @@ function renderThemeLaws() {
   $("#law-theme-name").textContent = [theme, detailTheme].filter(Boolean).join(" / ");
   $("#theme-laws").innerHTML = laws.length
     ? laws.map((law) => `<li>${escapeHtml(law)}</li>`).join("")
-    : "<li>세부 점검테마를 선택하면 국가법령정보센터 Open API로 관련 법령을 조회합니다.</li>";
+    : "<li>?紐? ?癒????춳???醫뤾문??롢늺 ???甕곕베議?類ｋ궖??녠숲 Open API嚥??온??甕곕베議??鈺곌퀬???몃빍??</li>";
 }
 
 async function loadLaws() {
@@ -208,7 +208,7 @@ function renderList() {
   }
 
   if (!items.length) {
-    list.innerHTML = '<div class="empty">저장된 점검결과가 없습니다.</div>';
+    list.innerHTML = '<div class="empty">\uC800\uC7A5\uB41C \uC810\uAC80\uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</div>';
     renderBulkDownloadState(items);
     renderTrash();
     return;
@@ -218,28 +218,28 @@ function renderList() {
     <article class="inspection-card" data-id="${escapeHtml(item.id)}">
       <label class="inspection-select">
         <input type="checkbox" data-action="select-inspection" data-id="${escapeHtml(item.id)}" ${state.selectedInspectionIds.has(item.id) ? "checked" : ""}>
-        <span>선택</span>
+        <span>\uC120\uD0DD</span>
       </label>
       <button class="inspection-summary" type="button" data-action="toggle-detail" data-id="${escapeHtml(item.id)}">
-        <span><span class="summary-label">테마 / 세부테마</span><strong>${escapeHtml(item.theme)} / ${escapeHtml(item.detailTheme || "-")}</strong></span>
-        <span><span class="summary-label">일시</span>${formatDate(item.inspectedAt)}</span>
-        <span><span class="summary-label">대상</span>${escapeHtml(displayTarget(item))}</span>
-        <span><span class="summary-label">점검자</span>${escapeHtml(displayInspectors(item))}</span>
+        <span><span class="summary-label">\uD14C\uB9C8 / \uC138\uBD80\uD14C\uB9C8</span><strong>${escapeHtml(item.theme)} / ${escapeHtml(item.detailTheme || "-")}</strong></span>
+        <span><span class="summary-label">\uC77C\uC2DC</span>${formatDate(item.inspectedAt)}</span>
+        <span><span class="summary-label">\uB300\uC0C1</span>${escapeHtml(displayTarget(item))}</span>
+        <span><span class="summary-label">\uC810\uAC80\uC790</span>${escapeHtml(displayInspectors(item))}</span>
       </button>
       <div class="inspection-detail">
         <div class="meta">
-          <span>조치 구분: ${escapeHtml(item.actionType)}</span>
-          <span>제목: ${escapeHtml(item.resultTitle || "-")}</span>
-          <span>세부 점검테마: ${escapeHtml(item.detailTheme || "-")}</span>
+          <span>\uC870\uCE58 \uAD6C\uBD84: ${escapeHtml(item.actionType)}</span>
+          <span>\uC81C\uBAA9: ${escapeHtml(item.resultTitle || "-")}</span>
+          <span>\uC138\uBD80 \uC810\uAC80\uD14C\uB9C8: ${escapeHtml(item.detailTheme || "-")}</span>
         </div>
         ${item.resultText ? `<div class="result">${escapeHtml(item.resultText)}</div>` : ""}
         ${lawBlock(item.theme, item.laws)}
         <div class="card-photos">
-          ${photoFigure(item.beforePhoto, "조치 전")}
+          ${photoFigure(item.beforePhoto, "\uC870\uCE58 \uC804")}
         </div>
         <div class="download-actions">
-          <button type="button" data-action="download-doc" data-id="${escapeHtml(item.id)}">한글파일 다운로드</button>
-          <button type="button" data-action="download-excel" data-id="${escapeHtml(item.id)}">엑셀파일 다운로드</button>
+          <button type="button" data-action="download-doc" data-id="${escapeHtml(item.id)}">\uD55C\uAE00\uD30C\uC77C \uB2E4\uC6B4\uB85C\uB4DC</button>
+          <button type="button" data-action="download-excel" data-id="${escapeHtml(item.id)}">\uC5D1\uC140\uD30C\uC77C \uB2E4\uC6B4\uB85C\uB4DC</button>
         </div>
       </div>
     </article>
@@ -248,15 +248,15 @@ function renderList() {
     if (!visibleIds.has(id)) state.selectedInspectionIds.delete(id);
   }
   renderBulkDownloadState(items);
-    renderTrash();
+  renderTrash();
 }
 
 function filteredInspectionItems() {
-  const filter = $("#filter-theme").value || "전체";
-  const detailFilter = $("#filter-detail-theme").value || "전체 세부테마";
+  const filter = $("#filter-theme").value || "\uC804\uCCB4";
+  const detailFilter = $("#filter-detail-theme").value || "\uC804\uCCB4 \uC138\uBD80\uD14C\uB9C8";
   return state.inspections.filter((item) => {
-    const themeMatches = filter === "전체" || item.theme === filter;
-    const detailMatches = detailFilter === "전체 세부테마" || item.detailTheme === detailFilter;
+    const themeMatches = filter === "\uC804\uCCB4" || item.theme === filter;
+    const detailMatches = detailFilter === "\uC804\uCCB4 \uC138\uBD80\uD14C\uB9C8" || item.detailTheme === detailFilter;
     return themeMatches && detailMatches;
   });
 }
@@ -274,27 +274,34 @@ function renderBulkDownloadState(items = filteredInspectionItems()) {
   $("#download-selected-excel").disabled = !selectedVisibleCount;
   const deleteSelected = $("#delete-selected");
   if (deleteSelected) deleteSelected.disabled = !visibleIds.length;
-  $("#selected-count").textContent = `선택 ${selectedVisibleCount}건`;
+  $("#selected-count").textContent = `\uC120\uD0DD ${selectedVisibleCount}\uAC74`;
 }
 
-
 function renderTrash() {
+  const panel = $("#trash-panel");
+  const toggle = $("#toggle-trash");
   const container = $("#trash-list");
-  if (!container) return;
   const items = state.trash || [];
+  if (toggle) {
+    toggle.textContent = state.trashVisible ? `\uD734\uC9C0\uD1B5 \uB2EB\uAE30 (${items.length}\uAC74)` : `\uD734\uC9C0\uD1B5 \uBCF4\uAE30 (${items.length}\uAC74)`;
+    toggle.setAttribute("aria-expanded", String(state.trashVisible));
+  }
+  if (panel) panel.hidden = !state.trashVisible;
+  if (!container || !state.trashVisible) return;
   if (!items.length) {
-    container.innerHTML = '<div class="empty">휴지통이 비어 있습니다.</div>';
+    container.innerHTML = '<div class="empty">\uD734\uC9C0\uD1B5\uC774 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.</div>';
     return;
   }
   container.innerHTML = items.map((item) => `
     <article class="trash-card">
       <strong>${escapeHtml(item.theme || "-")} / ${escapeHtml(item.detailTheme || "-")}</strong>
-      <span>삭제자: ${escapeHtml(item.deletedBy || "-")}</span>
-      <span>삭제일시: ${formatDate(item.deletedAt)}</span>
+      <span>\uC0AD\uC81C\uC790: ${escapeHtml(item.deletedBy || "-")}</span>
+      <span>\uC0AD\uC81C\uC77C\uC2DC: ${formatDate(item.deletedAt)}</span>
       <p>${escapeHtml(item.resultText || "-")}</p>
     </article>
   `).join("");
 }
+
 function displayTarget(item) {
   if (item.targetOwner || item.targetCategory || item.targetDetail) {
     return `${item.targetOwner || ""} ${item.targetCategory || ""} ${item.targetDetail || ""}`.trim();
@@ -309,11 +316,11 @@ function displayInspectors(item) {
 }
 
 function lawBlock(theme, itemLaws = []) {
-  const laws = itemLaws;
+  const laws = itemLaws.length ? itemLaws : state.themeLaws[theme] || [];
   if (!laws.length) return "";
   return `
     <div class="card-laws">
-      <strong>관련 산업안전보건 법령</strong>
+      <strong>\uAD6D\uAC00\uBC95\uB839\uC815\uBCF4\uC13C\uD130 \uAD00\uB828 \uBC95\uB839</strong>
       <ul>${laws.map((law) => `<li>${escapeHtml(law)}</li>`).join("")}</ul>
     </div>
   `;
@@ -321,17 +328,17 @@ function lawBlock(theme, itemLaws = []) {
 
 function photoFigure(src, label) {
   if (!src) {
-    return `<figure><img alt="${label} 사진 없음"><figcaption>${label} 사진 없음</figcaption></figure>`;
+    return `<figure><img alt="${label} \uC0AC\uC9C4 \uC5C6\uC74C"><figcaption>${label} \uC0AC\uC9C4 \uC5C6\uC74C</figcaption></figure>`;
   }
-  return `<figure><img src="${src}" alt="${label} 사진"><figcaption>${label} 사진</figcaption></figure>`;
+  return `<figure><img src="${src}" alt="${label} \uC0AC\uC9C4"><figcaption>${label} \uC0AC\uC9C4</figcaption></figure>`;
 }
 
 function renderStats() {
-  $("#total-count").textContent = `총 ${state.stats.total}건`;
+  $("#total-count").textContent = `\uCD1D ${state.stats.total}\uAC74`;
   renderBarStats("#theme-stats", state.stats.byTheme.map((item) => ({
     label: item.theme,
     value: item.total,
-    detail: Object.entries(item.actions).map(([name, count]) => `${name} ${count}건`).join(", ")
+    detail: Object.entries(item.actions).map(([name, count]) => `${name} ${count}\uAC74`).join(", ")
   })));
   renderBarStats("#action-stats", Object.entries(state.stats.byAction).map(([label, value]) => ({ label, value })));
   renderTargetMonthStats();
@@ -340,7 +347,7 @@ function renderStats() {
 function renderBarStats(selector, rows) {
   const container = $(selector);
   if (!rows.length) {
-    container.innerHTML = '<div class="empty">통계 데이터가 없습니다.</div>';
+    container.innerHTML = '<div class="empty">\uC9D1\uACC4\uD560 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</div>';
     return;
   }
   const max = Math.max(...rows.map((row) => row.value), 1);
@@ -348,7 +355,7 @@ function renderBarStats(selector, rows) {
     <div class="stat-row">
       <strong>${escapeHtml(row.label)}</strong>
       <div class="bar" aria-hidden="true"><span style="width: ${(row.value / max) * 100}%"></span></div>
-      <span>${row.value}건</span>
+      <span>${row.value}\uAC74</span>
       ${row.detail ? `<small>${escapeHtml(row.detail)}</small>` : ""}
     </div>
   `).join("");
@@ -359,21 +366,20 @@ function renderTargetMonthStats() {
   const targets = Object.keys(data);
   const container = $("#target-month-stats");
   if (!targets.length) {
-    container.innerHTML = '<div class="empty">월별 방문 데이터가 없습니다.</div>';
+    container.innerHTML = '<div class="empty">\uBC29\uBB38 \uD1B5\uACC4\uB97C \uBCF4\uC5EC\uC904 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</div>';
     return;
   }
-
   const months = [...new Set(targets.flatMap((target) => Object.keys(data[target])))].sort();
   container.innerHTML = `
     <table class="mini-table">
       <thead>
-        <tr><th>점검대상</th>${months.map((month) => `<th>${month}</th>`).join("")}</tr>
+        <tr><th>\uC810\uAC80\uB300\uC0C1</th>${months.map((month) => `<th>${month}</th>`).join("")}</tr>
       </thead>
       <tbody>
         ${targets.map((target) => `
           <tr>
             <th>${escapeHtml(target)}</th>
-            ${months.map((month) => `<td>${data[target][month] || 0}회</td>`).join("")}
+            ${months.map((month) => `<td>${data[target][month] || 0}\uD68C</td>`).join("")}
           </tr>
         `).join("")}
       </tbody>
@@ -385,21 +391,18 @@ function buildStatsFromInspections(inspections) {
   const byTheme = {};
   const byAction = {};
   const targetByMonth = {};
-
   for (const item of inspections) {
-    const detailTheme = item.detailTheme || "세부테마 미지정";
+    const detailTheme = item.detailTheme || "\uC138\uBD80\uD14C\uB9C8 \uBBF8\uC9C0\uC815";
     byTheme[detailTheme] ||= { theme: detailTheme, total: 0, actions: {} };
     byTheme[detailTheme].total += 1;
     byTheme[detailTheme].actions[item.actionType] = (byTheme[detailTheme].actions[item.actionType] || 0) + 1;
     byAction[item.actionType] = (byAction[item.actionType] || 0) + 1;
-
     const date = new Date(item.inspectedAt);
-    const month = Number.isNaN(date.getTime()) ? "날짜 미상" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-    const target = displayTarget(item) || "대상 미상";
+    const month = Number.isNaN(date.getTime()) ? "\uB0A0\uC9DC \uBBF8\uC9C0\uC815" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const target = displayTarget(item) || "\uB300\uC0C1 \uBBF8\uC9C0\uC815";
     targetByMonth[target] ||= {};
     targetByMonth[target][month] = (targetByMonth[target][month] || 0) + 1;
   }
-
   return {
     total: inspections.length,
     byTheme: Object.values(byTheme).sort((a, b) => b.total - a.total || a.theme.localeCompare(b.theme, "ko")),
@@ -418,7 +421,7 @@ function escapeHtml(value) {
 }
 
 function fileSafe(value) {
-  return String(value || "점검결과").replace(/[\\/:*?"<>|]/g, "_").slice(0, 60);
+  return String(value || "\uC810\uAC80\uACB0\uACFC").replace(/[\\/:*?"<>|]/g, "_").slice(0, 60);
 }
 
 function setStatus(message) {
@@ -444,7 +447,7 @@ function readPhoto(input, key, preview) {
     preview.src = compressed;
     const originalKb = Math.max(1, Math.round(file.size / 1024));
     const compressedKb = Math.max(1, Math.round(estimatedDataUrlBytes(compressed) / 1024));
-    setStatus(`사진 압축 완료: ${originalKb}KB -> ${compressedKb}KB`);
+    setStatus(`??彛??類ㅽ뀧 ?袁⑥┷: ${originalKb}KB -> ${compressedKb}KB`);
   };
   reader.readAsDataURL(file);
 }
@@ -527,8 +530,8 @@ async function inlinePhotoForDocument(item) {
 function inspectionDocHtml(item) {
   const laws = item.laws || [];
   const photoHtml = item.beforePhoto
-    ? `<img src="${item.beforePhoto}" width="50" height="50" alt="조치 전 사진" style="width:50px;height:50px;max-width:50px;max-height:50px;mso-width-alt:50;mso-height-alt:50;border:1px solid #999;">`
-    : "사진 없음";
+    ? `<img src="${item.beforePhoto}" width="50" height="50" alt="鈺곌퀣??????彛? style="width:50px;height:50px;max-width:50px;max-height:50px;mso-width-alt:50;mso-height-alt:50;border:1px solid #999;">`
+    : "??彛???곸벉";
   return `
     <!doctype html>
     <html lang="ko">
@@ -546,17 +549,17 @@ function inspectionDocHtml(item) {
         </style>
       </head>
       <body>
-        <h1>안전보건 점검결과</h1>
+        <h1>??됱읈癰귣떯援??癒?野껉퀗??/h1>
         <table>
-          <tr><th>점검테마</th><td>${escapeHtml(item.theme)}</td><th>세부 점검테마</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
-          <tr><th>점검일시</th><td>${formatDate(item.inspectedAt)}</td><th>조치 구분</th><td>${escapeHtml(item.actionType)}</td></tr>
-          <tr><th>점검대상</th><td colspan="3">${escapeHtml(displayTarget(item))}</td></tr>
-          <tr><th>점검자</th><td colspan="3">${escapeHtml(displayInspectors(item))}</td></tr>
-          <tr><th>점검결과</th><td class="result-cell" colspan="3">${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
-          <tr><th>관련 법령</th><td colspan="3">${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
+          <tr><th>?癒????춳</th><td>${escapeHtml(item.theme)}</td><th>?紐? ?癒????춳</th><td>${escapeHtml(item.detailTheme || "-")}</td></tr>
+          <tr><th>?癒???깅뻻</th><td>${formatDate(item.inspectedAt)}</td><th>鈺곌퀣???닌됲뀋</th><td>${escapeHtml(item.actionType)}</td></tr>
+          <tr><th>?癒?????/th><td colspan="3">${escapeHtml(displayTarget(item))}</td></tr>
+          <tr><th>?癒???/th><td colspan="3">${escapeHtml(displayInspectors(item))}</td></tr>
+          <tr><th>?癒?野껉퀗??/th><td class="result-cell" colspan="3">${escapeHtml(item.resultText).replaceAll("\n", "<br>")}</td></tr>
+          <tr><th>?온??甕곕베議?/th><td colspan="3">${laws.map(escapeHtml).join("<br>") || "-"}</td></tr>
         </table>
         <table>
-          <tr><th>조치 전 사진</th></tr>
+          <tr><th>鈺곌퀣??????彛?/th></tr>
           <tr><td class="photo-cell">${photoHtml}</td></tr>
         </table>
       </body>
@@ -592,8 +595,8 @@ function inspectionExcelHtml(item) {
       <body>
         <table border="1">
           <tr>
-            <th>점검테마</th><th>점검일시</th><th>점검대상</th><th>점검자</th>
-            <th>세부 점검테마</th><th>조치 구분</th><th>점검결과</th><th>관련 법령</th>
+            <th>?癒????춳</th><th>?癒???깅뻻</th><th>?癒?????/th><th>?癒???/th>
+            <th>?紐? ?癒????춳</th><th>鈺곌퀣???닌됲뀋</th><th>?癒?野껉퀗??/th><th>?온??甕곕베議?/th>
           </tr>
           <tr>
             <td>${escapeHtml(item.theme)}</td>
@@ -631,7 +634,7 @@ async function inspectionFile(item, type) {
 function downloadInspection(item, type) {
   return inspectionFile(item, type).then((file) => {
   downloadBlob(file.filename, file.mimeType, file.content);
-    setStatus(`${file.filename} 다운로드를 시작했습니다.`);
+    setStatus(`${file.filename} ??쇱뒲嚥≪뮆諭띄몴???뽰삂??됰뮸??덈뼄.`);
   });
 }
 
@@ -641,7 +644,7 @@ function delay(ms) {
 
 async function downloadSelectedInspections(type) {
   const items = filteredInspectionItems().filter((item) => state.selectedInspectionIds.has(item.id));
-  if (!items.length) return setStatus("다운로드할 점검결과를 선택하세요.");
+  if (!items.length) return setStatus("??쇱뒲嚥≪뮆諭???癒?野껉퀗?든몴??醫뤾문??뤾쉭??");
   const buttons = [$("#download-selected-doc"), $("#download-selected-excel")];
   buttons.forEach((button) => {
     button.disabled = true;
@@ -651,7 +654,7 @@ async function downloadSelectedInspections(type) {
       await downloadInspection(item, type);
       await delay(250);
     }
-    setStatus(`선택한 점검결과 ${items.length}건 다운로드를 시작했습니다.`);
+    setStatus(`?醫뤾문???癒?野껉퀗??${items.length}椰???쇱뒲嚥≪뮆諭띄몴???뽰삂??됰뮸??덈뼄.`);
   } finally {
     renderBulkDownloadState();
   }
@@ -659,14 +662,14 @@ async function downloadSelectedInspections(type) {
 
 async function deleteSelectedInspections() {
   const selectedIds = new Set(state.selectedInspectionIds);
-  $("#inspection-list [data-action=\"select-inspection\"]:checked").forEach((checkbox) => {
+  $$("#inspection-list [data-action=\"select-inspection\"]:checked").forEach((checkbox) => {
     selectedIds.add(checkbox.dataset.id);
   });
   const items = filteredInspectionItems().filter((item) => selectedIds.has(item.id));
-  if (!items.length) return showAlert("삭제할 점검결과를 선택하세요.");
-  if (!window.confirm("정말 삭제하시겠습니까?")) return;
-  const deletedBy = window.prompt("삭제자 이름을 입력하세요.");
-  if (!deletedBy || !deletedBy.trim()) return showAlert("삭제자 이름을 입력해야 삭제할 수 있습니다.");
+  if (!items.length) return showAlert("\uC0AD\uC81C\uD560 \uC810\uAC80\uACB0\uACFC\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
+  if (!window.confirm("\uC815\uB9D0 \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?")) return;
+  const deletedBy = window.prompt("\uC0AD\uC81C\uC790 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694.");
+  if (!deletedBy || !deletedBy.trim()) return showAlert("\uC0AD\uC81C\uC790 \uC774\uB984\uC744 \uC785\uB825\uD574\uC57C \uC0AD\uC81C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.");
   const button = $("#delete-selected");
   try {
     if (button) button.disabled = true;
@@ -682,13 +685,14 @@ async function deleteSelectedInspections() {
     renderList();
     renderStats();
     renderTrash();
-    setStatus(`선택한 점검결과 ${ids.length}건이 휴지통으로 이동했습니다.`);
+    setStatus(`\uC120\uD0DD\uD55C \uC810\uAC80\uACB0\uACFC ${ids.length}\uAC74\uC774 \uD734\uC9C0\uD1B5\uC73C\uB85C \uC774\uB3D9\uD588\uC2B5\uB2C8\uB2E4.`);
   } catch (error) {
     showAlert(error.message);
   } finally {
     renderBulkDownloadState();
   }
 }
+
 function activateView(viewId) {
   $$(".tab").forEach((item) => item.classList.toggle("is-active", item.dataset.view === viewId));
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === viewId));
@@ -718,14 +722,14 @@ function bindEvents() {
   $("#filter-detail-theme").addEventListener("change", renderList);
   $("#save-result-sample").addEventListener("click", async () => {
     const content = $("#new-result-content").value.trim();
-    if (!content) return setStatus("등록할 점검결과 내용을 입력하세요.");
+    if (!content) return setStatus("?源낆쨯???癒?野껉퀗????곸뒠????낆젾??뤾쉭??");
     const duplicate = state.resultSamples.find((item) => item.content === content);
     if (duplicate) {
       state.visibleResultSampleIds.add(duplicate.id);
       renderFormOptions();
       $("#result-sample").value = duplicate.id;
       updateResultMode();
-      return setStatus("이미 등록된 점검결과를 선택했습니다.");
+      return setStatus("??? ?源낆쨯???癒?野껉퀗?든몴??醫뤾문??됰뮸??덈뼄.");
     }
     const data = await api("/api/result-samples", {
       method: "POST",
@@ -740,7 +744,7 @@ function bindEvents() {
     renderFormOptions();
     $("#result-sample").value = data.sample.id;
     updateResultMode();
-    setStatus("점검결과 데이터에 등록되었습니다.");
+    setStatus("?癒?野껉퀗???怨쀬뵠?怨쀫퓠 ?源낆쨯??뤿???щ빍??");
   });
   $("#select-all-inspections").addEventListener("change", (event) => {
     const items = filteredInspectionItems();
@@ -798,7 +802,7 @@ function bindEvents() {
   $("#beforePhoto").addEventListener("change", (event) => readPhoto(event.target, "beforePhoto", $("#before-preview")));
   $("#add-detail-theme").addEventListener("click", async () => {
     const detailTheme = $("#new-detail-theme").value.trim();
-    if (!detailTheme) return setStatus("새로운 세부 점검테마를 입력하세요.");
+    if (!detailTheme) return setStatus("??덉쨮???紐? ?癒????춳????낆젾??뤾쉭??");
     const data = await api("/api/detail-themes", {
       method: "POST",
       body: JSON.stringify({ detailTheme })
@@ -809,26 +813,26 @@ function bindEvents() {
     $("#new-detail-theme").value = "";
     $("#form-top").scrollIntoView({ behavior: "smooth", block: "start" });
     loadLaws();
-    setStatus("세부 점검테마가 등록되었습니다.");
+    setStatus("?紐? ?癒????춳揶쎛 ?源낆쨯??뤿???щ빍??");
   });
 
   $("#add-contractor").addEventListener("click", async () => {
     const contractor = $("#new-contractor").value.trim();
-    if (!contractor) return setStatus("추가할 수급업체명을 입력하세요.");
+    if (!contractor) return setStatus("?곕떽?????랁닋??녾퍥筌뤿굞????낆젾??뤾쉭??");
     const data = await api("/api/contractors", {
       method: "POST",
       body: JSON.stringify({ contractor })
     });
     state.contractors = data.contractors;
     $("#new-contractor").value = "";
-    $("#targetOwner").value = "수급업체(공사업체 포함)";
+    $("#targetOwner").value = "??랁닋??녾퍥(?⑤벊沅??녾퍥 ??釉?";
     renderTargetOptions(contractor);
-    setStatus("수급업체가 등록되었습니다.");
+    setStatus("??랁닋??녾퍥揶쎛 ?源낆쨯??뤿???щ빍??");
   });
 
   $("#add-inspector").addEventListener("click", async () => {
     const inspector = $("#new-inspector").value.trim();
-    if (!inspector) return setStatus("추가할 인원을 입력하세요.");
+    if (!inspector) return setStatus("?곕떽????紐꾩뜚????낆젾??뤾쉭??");
     const data = await api("/api/inspectors", {
       method: "POST",
       body: JSON.stringify({ inspector })
@@ -838,7 +842,7 @@ function bindEvents() {
     renderInspectors();
     const added = $(`input[name="inspectors"][value="${CSS.escape(inspector)}"]`);
     if (added) added.checked = true;
-    setStatus("점검자가 등록되었습니다.");
+    setStatus("?癒??癒? ?源낆쨯??뤿???щ빍??");
   });
 
   $("#inspector-options").addEventListener("click", async (event) => {
@@ -852,16 +856,16 @@ function bindEvents() {
     });
     state.inspectors = data.inspectors;
     renderInspectors();
-    setStatus("점검자가 삭제되었습니다.");
+    setStatus("?癒??癒? ?????뤿???щ빍??");
   });
 
   $("#inspection-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const inspectors = getSelectedInspectors();
-    if (!inspectors.length) return showAlert("점검자를 한 명 이상 선택하세요.");
+    if (!inspectors.length) return showAlert("?癒??癒? ??筌???곴맒 ?醫뤾문??뤾쉭??");
     const sample = selectedResultSample();
     const directText = $("#new-result-content").value.trim();
-    if (!sample && !directText) return showAlert("점검결과를 작성하거나 등록된 점검결과를 선택하세요.");
+    if (!sample && !directText) return showAlert("?癒?野껉퀗?든몴??臾믨쉐??띻탢???源낆쨯???癒?野껉퀗?든몴??醫뤾문??뤾쉭??");
     const payload = {
       theme: $("#theme").value,
       detailTheme: $("#detailTheme").value,
@@ -885,8 +889,8 @@ function bindEvents() {
     state.stats = data.stats;
     state.themes = [...new Set([...state.themes, payload.theme])];
     renderFormOptions();
-    $("#filter-theme").value = "전체";
-    $("#filter-detail-theme").value = "전체 세부테마";
+    $("#filter-theme").value = "?袁⑷퍥";
+    $("#filter-detail-theme").value = "?袁⑷퍥 ?紐????춳";
     renderList();
     renderStats();
     event.target.reset();
@@ -897,7 +901,7 @@ function bindEvents() {
     state.currentLaws = [];
     renderTargetOptions();
     renderThemeLaws();
-    showAlert("점검결과 저장완료!");
+    showAlert("?癒?野껉퀗?????關?욜뙴?");
     window.setTimeout(() => {
       activateView("list");
       renderList();
@@ -918,9 +922,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function normalizeActionType(actionType) {
-  if (["A 조치", "교육", "점검완료"].includes(actionType)) return "즉시조치완료";
-  if (["B 조치", "C 조치"].includes(actionType)) return "조치필요";
-  return actionType || "즉시조치완료";
+  if (["A \uC870\uCE58", "\uAD50\uC721", "\uC810\uAC80\uC644\uB8CC", "\uC989\uC2DC\uC870\uCE58\uC644\uB8CC"].includes(actionType)) return "\uC989\uC2DC\uC870\uCE58\uC644\uB8CC";
+  if (["B \uC870\uCE58", "C \uC870\uCE58", "\uC870\uCE58\uD544\uC694"].includes(actionType)) return "\uC870\uCE58\uD544\uC694";
+  return actionType || "\uC870\uCE58\uD544\uC694";
 }
 
 function updateResultMode() {
@@ -930,21 +934,6 @@ function updateResultMode() {
   $("#actionType").disabled = !isDirect;
   $("#new-result-content").disabled = !isDirect;
   $("#new-result-content").placeholder = isDirect
-    ? "직접 작성할 점검결과를 입력하거나, 아래 버튼으로 데이터에 등록하세요."
-    : "등록된 점검결과를 선택 중입니다.";
+    ? "\uC0C8\uB85C\uC6B4 \uC810\uAC80\uACB0\uACFC \uC791\uC131 \uBC0F \uB4F1\uB85D"
+    : "\uB4F1\uB85D\uB41C \uC810\uAC80\uACB0\uACFC\uB97C \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4.";
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

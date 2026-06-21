@@ -133,6 +133,39 @@ main {
   display: block;
 }
 
+.auth-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.auth-panel.is-disabled {
+  opacity: 0.78;
+}
+
+.auth-panel strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.auth-panel span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.auth-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) repeat(3, auto);
+  gap: 8px;
+}
+
 .section-heading {
   display: flex;
   align-items: center;
@@ -198,7 +231,7 @@ textarea {
 
 textarea {
   resize: vertical;
-  min-height: 150px;
+  min-height: 190px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -217,7 +250,7 @@ input[type="file"] {
 }
 
 .sample-save {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .law-panel {
@@ -370,8 +403,8 @@ button:hover {
 }
 
 .photo-box img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
+  width: 120px;
+  height: 120px;
   object-fit: cover;
   border-radius: 6px;
   background: #e7edf2;
@@ -410,8 +443,53 @@ button:hover {
   gap: 14px;
 }
 
+.result-controls,
+.bulk-download-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.bulk-download-panel {
+  grid-template-columns: minmax(160px, 1fr) auto auto minmax(90px, auto);
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.bulk-select-all,
+.inspection-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.bulk-select-all input,
+.inspection-select input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+#selected-count {
+  align-self: center;
+  color: var(--brand-strong);
+  font-weight: 800;
+}
+
 .inspection-card {
   padding: 18px;
+}
+
+.inspection-select {
+  width: fit-content;
+  margin-bottom: 12px;
 }
 
 .inspection-summary {
@@ -508,8 +586,8 @@ button:hover {
 }
 
 .card-photos img {
-  width: 100%;
-  aspect-ratio: 4 / 3;
+  width: 120px;
+  height: 120px;
   object-fit: cover;
   border-radius: 6px;
   border: 1px solid var(--line);
@@ -583,6 +661,48 @@ button:hover {
   border-radius: 8px;
 }
 
+
+.danger-button {
+  border-color: #e8a6a6;
+  background: #fff4f4;
+  color: #a53030;
+  font-weight: 800;
+}
+
+.danger-button:hover {
+  border-color: #c84444;
+  background: #ffe8e8;
+}
+
+.trash-panel {
+  margin-top: 16px;
+}
+
+.trash-list {
+  display: grid;
+  gap: 10px;
+}
+
+.trash-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #f1c7c7;
+  border-radius: 8px;
+  background: #fffafa;
+  color: var(--ink);
+}
+
+.trash-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.trash-card p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 760px) {
   .topbar {
     align-items: stretch;
@@ -590,10 +710,14 @@ button:hover {
   }
 
   .tabs,
+  .auth-panel,
+  .auth-controls,
   .grid.two,
   .photo-grid,
   .card-photos,
   .stats-layout,
+  .result-controls,
+  .bulk-download-panel,
   .inline-add,
   .sample-save,
   .contractor-add {
@@ -662,9 +786,18 @@ button:hover {
     grid-column: 1 / -1;
   }
 
+
+  .photo-box img,
+  .card-photos img {
+    width: 60px;
+    height: 60px;
+  }
   .mini-table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
   }
 }
+
+
+
